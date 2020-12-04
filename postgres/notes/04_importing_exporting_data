@@ -1,0 +1,116 @@
+---------------------------------------------------
+CHAPTER 4 - IMPORTING AND EXPORTING DATA
+---------------------------------------------------
+
+- Importing CSV Data
+
+    # Format
+    COPY table_name
+    FROM '~/Directory/your_file.csv'
+    WITH (FORMAT CSV, HEADER);
+
+
+
+- Example - Importing Census Data
+
+    # The real table has a lot of columns, we match them exactly
+    CREATE TABLE us_counties_2010 (
+      geo_name varchar(90),
+      state_us_abbreviation varchar(2),
+      summary_level varchar(3),
+      region smallint,
+      division smallint,
+      state_fips varchar(2),
+      county_fips varchar(3),
+      area_land bigint,
+      area_water bigint,
+      population_count_100_percent integer,
+      housing_unit_count_100_percent integer,
+      internal_point_lat numeric(10,7),
+      internal_point_lon numeric(10,7),
+      p0010001 integer,
+      p0010002 integer,
+      p0010003 integer,
+      p0010004 integer,
+      p0010005 integer,
+      --snip--
+      p0040049 integer,
+      p0040065 integer,
+      p0040072 integer,
+      h0010001 integer,
+      h0010002 integer,
+      h0010003 integer
+    );
+
+
+    # Perform the import
+    COPY us_counties_2010
+    FROM '~/Directory/us_counties_2010.csv'
+    WITH (FORMAT CSV, HEADER);
+
+
+
+- Importing a Subset of Columns
+
+    # Create the table for all data
+    CREATE TABLE supervisor_salaries (
+        town varchar(30),
+        county varchar(30),
+        supervisor varchar(30),
+        start_date date,
+        salary money,
+        benefits money
+    );
+
+
+    # Only 3 of the columns are in the csv
+    COPY supervisor_salaries (town, supervisor, salary)
+    FROM '~/Directory/supervisor_salaries.csv'
+    WITH (FORMAT CSV, HEADER);
+
+
+
+-  Adding Default Values
+
+    # Delete the data we imported previously
+    DELETE FROM supervisor_salaries;
+
+    # Create temporary table
+    CREATE TEMPORARY TABLE supervisor_salaries_temp (LIKE supervisor_salaries);
+
+    # Copy csv data into temporary table
+    COPY supervisors_salaries_temp (town, supervisor, salary)
+    FROM '~/Directory/supervisor_salaries.csv'
+
+    # Insert into main table with default value
+    INSERT INTO supervisor_salaries (town, county, supervisor, salary)
+    SELECT town, 'Some County', supervisor, salary
+    FROM supervisor_salaries_temp;
+
+    # Remove temporary table
+    DROP TABLE supervisor_salaries_temp;
+
+
+
+- Exporting Data
+
+    # Export all columns
+    COPY us_counties_2010
+    TO '~/Directory/us_counties_2010.csv'
+    WITH (FORMAT CSV, HEADER);
+
+
+    # Export particular columns
+    COPY us_counties_2010 (geo_name, internal_point_lat, internal_point_lon)
+    TO '~/Directory/us_counties_2010_latlon.csv'
+    WITH (FORMAT CSV, HEADER);
+
+
+    # Export query results
+    COPY (
+        SELECT geo_name, state_us_abbreviation
+        FROM us_counties_2010
+        WHERE geo_name ILIKE '%mill%'
+        )
+    TO '~/Directory/us_counties_mill_export.csv'
+    WITH (FORMAT CSV, HEADER);

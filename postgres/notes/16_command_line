@@ -1,0 +1,57 @@
+---------------------------------------------------
+CHAPTER 16 - COMMAND LINE POSTGRESQL
+---------------------------------------------------
+
+- Changing User and Database Connection
+
+    # Switch to different database
+    \c gis_analysis
+
+    # Switch database and user
+    \c gis_analysis anthony
+
+
+
+- Metacommands
+
+    \d [pattern]       Displays columns, data types, and other information
+    
+    \di [pattern]      Displays indexes and their associated tables
+
+    \dt [pattern]      Displays tables and the account that owns them
+
+    \du [pattern]      Displays user accounts and their attributes
+
+    \dv [pattern]      Displays views and the account that owns them
+
+    \dx [pattern]      Displays installed extensions
+
+
+
+- Using \copy for Import and Export
+
+    The \copy command can be used just like the COPY command.
+
+
+    # Copy to table
+    \copy state_regions FROM '~/Directory/state_regions.csv'
+     WITH (FORMAT CSV, HEADER);
+
+
+    # Copy query results to file
+    SELECT * FROM grades;
+    \o '~/Directory/query_output.csv'
+
+
+    # Read and execute SQL stored in a file
+    psql -d analysis -U postgres -f display-grades.sql
+
+
+
+- Adding a Database with createdb
+
+    # Create a new database
+    createdb -U postgres -e box_office
+
+    # Switch to database
+    psql -d box_office -U postgres

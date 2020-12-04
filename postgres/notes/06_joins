@@ -1,0 +1,67 @@
+---------------------------------------------------
+CHAPTER 6 - JOINS
+---------------------------------------------------
+
+- Basic Join Syntax
+
+    # Inner join by default
+    SELECT *
+    FROM employees JOIN departments
+    ON employees.dept_id = departments.dept_id
+
+
+
+- Join Types
+
+    JOIN (aka INNER JOIN)
+      Returns rows from both tables where matching values are found
+      in the joined columns of both tables.
+
+    LEFT JOIN
+      Returns every row from the left table, plus rows that match
+      values in the joined column from the right table.  When the left
+      table row doesn't have a match in the right table, the result
+      shows no values from the right table.
+
+    RIGHT JOIN
+      Returns every row from the right table, plus rows that match
+      the key values in the key column from the left table.  When a
+      right table row doesn't have a match in the left table, the 
+      result shows no values from the left table.
+
+    FULL OUTER JOIN
+      Returns every row from both tables and matches rows, then joins
+      the rows where values in the joined columns match.  If there's
+      no match for a value in either the left or right table, the 
+      query result contains an empty row for the other table.
+
+    CROSS JOIN
+      Returns every possible combination of rows from both tables.
+
+
+
+- Checking for NULL
+
+    # Find employees that are missing departments
+    SELECT *
+    FROM employees
+    LEFT JOIN departments
+    ON employees.dept_id = departments.dept_id
+    WHERE departments.dept_id IS NULL;
+
+
+
+- Selecting Specific Columns From Joined Data
+
+    # Must specify which 'dept_id' to return
+    SELECT employees.dept_id
+    FROM employees
+    LEFT JOIN departments
+    ON employees.dept_id = departments.dept_id;
+
+
+    # Define aliases to save some typing
+    SELECT e.dept_id
+    FROM employees AS e
+    LEFT JOIN departments AS d
+    ON e.dept_id = d.dept_id;

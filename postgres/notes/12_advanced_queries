@@ -1,0 +1,404 @@
+---------------------------------------------------
+CHAPTER 12 - ADVANCED QUERIES
+---------------------------------------------------
+
+- Using Subqueries
+
+    A subquery is nested inside another query.  Typically, it's used for a calculation or
+      logical test that provides a value or a set of data to be passed into the main portion
+      of the query.
+
+
+    # Update, with filtering of the rows we want to update
+    UPDATE table
+    SET column = (SELECT column
+                  FROM table_b
+                  WHERE table.column = table_b.column)
+    WHERE EXISTS (SELECT column
+                  FROM table_b
+                  WHERE table.column = table_b.column);
+
+
+
+- Filtering with Subqueries 
+
+    # Return the US counties that are at or above the 90th percentile for population
+    SELECT geo_name,
+           state_us_abbr,
+           population
+    FROM us_counties_2010
+    WHERE population >= (
+        SELECT percentile_cont(.9) WITHIN GROUP (ORDER BY population)
+        FROM us_counties_2010
+    )
+    ORDER BY population DESC;
+
+
+
+- Using a Subquery to Identify Which Rows to Delete
+
+    DELETE FROM us_counties_2010
+    WHERE population < (
+        SELECT percentile_cont(.9) WITHIN GROUP (ORDER BY population)
+        FROM us_counties_2010
+    );
+
+
+
+- Creating Dervied Queries with Subqueries
+
+    If your subquery returns rows and columns of data, you can convert that data to a table
+      by placing it in a FROM clause, the result of which is known as a 'derived table'.  A
+      derived table behaves just like any other table.
+
+
+    # Find the average and median of US counties, as well as the difference between them
+    SELECT round(calcs.average, 0) AS average,
+           calcs.median,
+           round(calcs.average - calcs.median, 0) AS median_average_diff
+    FROM (
+        SELECT avg(p0010001) AS average,
+               percentile_cont(.5) WITHIN GROUP (ORDER BY p0010001)::numeric(10,1) AS median
+        FROM us_counties_2010
+       )
+    AS calcs;
+
+    average    median     median_average_diff
+    -------    -------    -------------------
+      98233    25857.0                  72376
+
+
+
+- Joining Derived Tables
+
+      SELECT census.state_us_abbreviation AS st,
+             census.st_population,
+             plants.plant_count,
+             round((plants.plant_count/census.st_population::numeric(10,1))*1000000, 1) 
+               AS plants_per_million
+      FROM
+      (
+          SELECT st,
+                 count(*) AS plant_count
+          FROM meat_poultry_egg_inspect
+          GROUP BY st
+      )
+      AS plants
+      JOIN
+      (
+          SELECT state_us_abbreviation,
+                 sum(p0010001) AS st_population
+          FROM us_counties_2010
+          GROUP BY state_us_abbreviation
+      )
+      AS census
+      ON plants.st = census.state_us_abbreviation
+      ORDER BY plants_per_million DESC;
+
+
+
+- Generating Columns with Subqueries
+
+    We can also generate new columns of data with subqueries by placing a subquery in the
+      column list after SELECT.  
+
+
+    # Get the population of each state, along with the US median
+    SELECT geo_name,
+           state_us_abbreviation AS st,
+           population AS total_pop,
+           (SELECT percentile_cont(.5) WITHIN GROUP (ORDER BY population)
+            FROM us_counties_2010) AS us_median
+    FROM us_counties_2010;
+
+    geo_name          st    total_pop    us_median
+    --------------    --    ---------    ---------
+    Autauga County    AL        54571        25857
+    Baldwin County    AL       182265        25857
+    Barbour County    AL        27457        25857
+    Bibb County       AL        22915        25857
+    Blount County     AL        57322        25857
+    --snip--
+
+
+    # Calculate the difference between each county's population and the median
+    #   for all counties whose population is within 1000 of the median
+      SELECT geo_name,
+             state_us_abbreviation AS st,
+             population AS total_pop,
+             (SELECT percentile_cont(.5) WITHIN GROUP (ORDER BY population)
+              FROM us_counties_2010) AS us_median,
+             population - (SELECT percentile_cont(.5) WITHIN GROUP (ORDER BY population)
+                   FROM us_counties_2010) AS diff_from_median
+      FROM us_counties_2010
+      WHERE (population - (SELECT percentile_cont(.5) WITHIN GROUP (ORDER BY population)
+                           FROM us_counties_2010))
+      BETWEEN -1000 AND 1000;
+
+
+
+- Generating Values for the IN Operator
+
+    # Get employee records for all retirees
+    SELECT first_name, last_name
+    FROM employees
+    WHERE id IN (
+        SELECT id
+        FROM retirees
+    );
+
+
+
+- Checking Whether Values Exist
+
+    The EXISTS subquery is a true/false test.  It returns true if the subquery in parentheses
+      returns at least one row.
+
+
+    # Returns all employees if there is at least one retiree with an 'id'
+    SELECT first_name, last_name
+    FROM employees
+    WHERE EXISTS (
+        SELECT id
+        FROM retirees
+    );
+
+
+    # Mimics the behavior of IN
+    SELECT first_name, last_name
+    FROM employees
+    WHERE EXISTS (
+        SELECT id
+        FROM retirees
+        WHERE id = employees.id
+    );
+
+
+    # Find employees with no corresponding record in retirees with NOT EXISTS
+    SELECT fist_name, last_name
+    FROM employees
+    WHERE NOT EXISTS (
+        SELECT id
+        FROM retirees
+        WHERE id = employees.id
+    );
+    
+
+
+- Common Table Expressions
+
+    As an alternative to placing subqueries in a FROM clause, we can also create temporary
+      tables for querying using 'CTE (Common Table Expressions'.  CTE is a recent addition to
+      standard SQL, and is informally called a 'WITH clause'.
+
+    Using a CTE, you can define one or more tables up front with subqueries.  Then, you can 
+      query the table results as often as needed in the main query that follows.
+
+
+    # Determines how many counties in each state have 100K+ people
+    WITH
+        large_counties (geo_name, st, population)
+    AS
+        (
+            SELECT geo_name, state_us_abbreviation, population
+            FROM us_counties_2010
+            WHERE population > 100000
+        )
+    SELECT st, count(*)
+    FROM large_counties
+    GROUP BY st
+    ORDER BY count(*) DESC;
+
+    st    count
+    --    -----
+    TX       39
+    CA       35
+    FL       33
+    PA       31
+    OH       28
+    --snip--
+
+
+    # Same query without a CTE
+    SELECT state_us_abbreviation, count(*)
+    FROM us_counties_2010
+    WHERE population >= 100000
+    GROUP BY state_us_abbreviation
+    ORDER BY count(*) DESC;
+
+
+
+- Example - Derived Tables with CTE
+
+      WITH
+          counties (st, population) AS
+          (SELECT state_us_abbreviation, sum(population_count_100_percent)
+           FROM us_counties_2010
+           GROUP BY state_us_abbreviation),
+    
+          plants (st, plants) AS
+          (SELECT st, count(*) AS plants
+           FROM meat_poultry_egg_inspect
+           GROUP BY st)
+    
+      SELECT counties.st,
+             population,
+             plants,
+             round((plants/population::numeric(10,1)) * 1000000, 1) AS per_million
+      FROM counties JOIN plants
+      ON counties.st = plants.st
+      ORDER BY per_million DESC;
+
+
+
+- Cross Tabulations
+
+    Cross tabulations provide a simple way to summarize and compare variables by displaying them
+      in a matrix.  Cross tabulations are also known as 'pivot tables' or 'crosstabs'.  They are
+      often used to report summaries of survey results or to compare sets of variables.  
+
+
+    # Install the Postgres 'tablefunc' module to get crosstab
+    CREATE EXTENSION tablefunc;
+
+
+    # Create table for survey results
+    CREATE TABLE ice_cream_survey (
+        response_id integer PRIMARY KEY,
+        office varchar(20),
+        flavor varchar(20)
+    );
+
+    # Load survey results
+    COPY ice_cream_survey
+    FROM '~/Directory/ice_cream_survey.csv'
+    WITH (FORMAT CSV, HEADER);
+
+
+    # Look at the survey results
+    SELECT *
+    FROM ice_cream_survey
+    LIMIT 5;
+
+    response_id    office      flavor
+    -----------    --------    ----------
+              1    Uptown      Chocolate
+              2    Midtown     Chocolate
+              3    Downtown    Strawberry
+              4    Uptown      Chocolate
+              5    Midtown     Chocolate
+
+
+    # Get survey results by office
+    #
+    # First subquery generates the data for the crosstab and has 3 required columns
+    #     1. First column supplies row names
+    #     2. Second column supplies column names
+    #     3. Third column supplies values for each cell
+    #
+    # Second subquery produces set of category names for the columns
+    #
+    # AS clause specifies names and data types of crosstab's output columns
+    #     (must match output of second subquery)
+
+    SELECT *
+    FROM crosstab('SELECT office,
+                          flavor,
+                          count(*)
+                    FROM ice_cream_survey
+                    GROUP BY office, flavor
+                    ORDER BY office',
+  
+                  'SELECT flavor
+                    FROM ice_cream_survey
+                    GROUP BY flavor
+                    ORDER BY flavor')
+  
+    AS (office varchar(20),
+        chocolate bigint,
+        strawberry bigint,
+        vanilla bigint);  
+
+
+    office      chocolate    strawberry    vanilla
+    --------    ---------    ----------    -------
+    Downtown           23            32         19
+    Midtown            41                       23
+    Uptown             22            17         23
+
+
+
+- Example - Crosstab of City Temperature Readings
+
+    SELECT *
+    FROM crosstab('SELECT
+                       station_name,
+                       date_part(''month'', observation_date),
+                       percentile_cont(.5) WITHIN GROUP (ORDER BY max_temp)
+                   FROM temperature_readings
+                   GROUP BY station_name, date_part(''month'', observation_date)
+                   ORDER BY station_name',
+    
+                  'SELECT month
+                   FROM generate_series(1,12) month')
+    
+    AS (station varchar(50),
+        jan numeric(3,0),
+        feb numeric(3,0),
+        mar numeric(3,0),
+        apr numeric(3,0),
+        may numeric(3,0),
+        jun numeric(3,0),
+        jul numeric(3,0),
+        aug numeric(3,0),
+        sep numeric(3,0),
+        oct numeric(3,0),
+        nov numeric(3,0),
+        dec numeric(3,0)
+    );
+
+
+
+- Reclassifying Values with CASE
+
+    The CASE statement is a conditional expression.  For data analysis, it's handy for 
+      reclassifying values into categories.
+
+
+    # CASE Syntax
+    CASE WHEN condition THEN result
+         WHEN other_condition THEN result
+         ELSE result
+    END
+
+
+    # Example
+    SELECT max_temp,
+           CASE WHEN max_temp >= 90 THEN 'Hot'
+                WHEN max_temp BETWEEN 70 AND 89 THEN 'Warm'
+                WHEN max_temp BETWEEN 50 AND 69 THEN 'Pleasant'
+                WHEN max_temp BETWEEN 33 AND 49 THEN 'Cold'
+                WHEN max_temp BETWEEN 20 AND 32 THEN 'Freezing'
+                ELSE 'Inhumane'
+           END AS temperature_group
+    FROM temperature_readings;
+
+
+
+- Example - Using CASE in a CTE
+
+    WITH temps_collapsed (station_name, max_temperature_group) AS
+        (SELECT station_name,
+               CASE WHEN max_temp >= 90 THEN 'Hot'
+                    WHEN max_temp BETWEEN 70 AND 89 THEN 'Warm'
+                    WHEN max_temp BETWEEN 50 AND 69 THEN 'Pleasant'
+                    WHEN max_temp BETWEEN 33 AND 49 THEN 'Cold'
+                    WHEN max_temp BETWEEN 20 AND 32 THEN 'Freezing'
+                    ELSE 'Inhumane'
+                END
+         FROM temperature_readings)
+  
+    SELECT station_name, max_temperature_group, count(*)
+    FROM temps_collapsed
+    GROUP BY station_name, max_temperature_group
+    ORDER BY station_name, count(*) DESC;

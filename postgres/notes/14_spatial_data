@@ -1,0 +1,169 @@
+---------------------------------------------------
+CHAPTER 14 - SPATIAL DATA
+---------------------------------------------------
+
+- PostGIS
+
+    PostGIS is a free and open-source GIS database built on top of PostgreSQL.  
+
+
+    # Install PostGIS
+    http://postgis.net/install
+
+
+    # Create DB for spatial data
+    CREATE DATABASE gis_analysis;
+
+
+    # Enable PostGIS extensions
+    CREATE EXTENSION postgis;
+
+
+
+- Standard Geometric 'Simple Features'
+
+    These object types are standardized by ISO and OGC (Open Geospatial Consortium).
+
+
+    Point = single location in a 2D or 3D plane
+          = on maps, usually represented as (latitude, longitude)
+
+    LineString = 2 or more points connected by a straight line
+               = can represent a road, trail, or stream
+
+    Polygon = 2D shape like a triangle or square
+            = can represent objects such as nations, states, buildings, bodies of water
+
+    MultiPoint = set of points
+               = for example, can represent multiple locations of a retailer
+
+    MultiLineString = set of linestrings
+                    = can represent a road with multiple noncontiguous segments
+
+    MultiPolygon = set of polygons
+                 = can represent a parcel of land that is divided into two segments by a road
+
+
+
+- Well-Known Text Formats
+
+    Generally, to create a spatial object, the functions require input of 
+      - a 'WKT (Well-Known Text)' string, which is text that represents a geometry
+      - a 'SRID (Spatial Reference System Id)' that specifies where on the grid to place the objects
+
+    The OGG's standard WKT format includes the geometry type and its coordinates inside one or
+      more sets of parentheses.  Here, we'll use longitude/latitude pairs of coordinates.
+
+
+    WKT Formats for Geometries
+    -------------------------------------
+    Point
+    POINT (-74.9 42.7)
+    A coordinate pair marking a point at −74.9 longitude and 42.7 latitude.
+
+    LineString
+    LINESTRING (-74.9 42.7, -75.1 42.7)
+    A straight line with endpoints marked by two coordinate pairs.
+
+    Polygon
+    POLYGON ((-74.9 42.7, -75.1 42.7, -75.1 42.6, -74.9 42.7))
+    A triangle outlined by three different pairs of coordinates. Although listed twice, the first 
+      and last pair are the same coordinates, closing the shape.
+
+    MultiPoint
+    MULTIPOINT (-74.9 42.7, -75.1 42.7)
+    Two Points, one for each pair of coordinates.
+
+    MultiLineString
+    MULTILINESTRING ((-76.27 43.1, -76.06 43.08), (-76.2 43.3, -76.2 43.4, -76.4 43.1))
+    Two LineStrings. The first has two points; the second has three.
+
+    MultiPolygon
+    MULTIPOLYGON (((-74.92 42.7, -75.06 42.71, -75.07 42.64, -74.92 42.7), 
+                   (-75.0 42.66, -75.0 42.64, -74.98 42.64, -74.98 42.66, -75.0 42.66)))
+    Two Polygons. The first is a triangle, and the second is a rectangle.
+
+
+
+- Coordinate Systems
+
+    - Representing the Earth's spherical surface on a 2D map requires some kind of projection
+        with its own 'projected coordinate system' that flattens the Earth's round surface
+        to a 2D plane.
+
+    - Most navigation apps use 'Mercator Projection', which distorts land areas close to the
+        north and south poles to make them appear much larger than reality.
+
+    - The 'Albers Projection' is most often displayed on TV screens where a map of the US is
+        shown.  
+
+    - Projections are derived from 'geographic coordinate systems', which define the grid of 
+        latitude, longitude, and height of any point on the globe along with factors
+        including the Earth's shape.
+
+
+
+- Spatial Reference System Identifier (SRID)
+
+    When using GIS applications, we need to specify the coordinate system we're using via 
+      its SRID.  
+
+    When we enabled the PostGIS extension, the process created the 'spatial_ref_sys' table, 
+      which contains SRIDs as its primary key.  The table also contains the 'srtext' column, 
+      which includes a WDT representation of the spatial reference system.
+
+    In these examples, we'll frequently use SRID 4326, the ID for the geographic coordinate
+      system 'WGS 84'.  
+
+
+    # Retrieves the WKT for SRID 4326
+    SELECT srtext
+    FROM spatial_ref_sys
+    WHERE srid = 4326;
+
+    GEOGCS["WGS 84",
+        DATUM["WGS_1984",
+            SPHEROID["WGS 84",6378137,298.257223563,
+                AUTHORITY["EPSG","7030"]],
+            AUTHORITY["EPSG","6326"]],
+        PRIMEM["Greenwich",0,
+            AUTHORITY["EPSG","8901"]],
+        UNIT["degree",0.0174532925199433,
+            AUTHORITY["EPSG","9122"]],
+        AUTHORITY["EPSG","4326"]]
+
+
+    The 'GEOGCS' keyword provides the geographic coordinate system in use.
+    The 'PRIMEM' keyword specifies the location of the prime meridian, 0 longitude.
+
+
+
+- PostGIS Data Types
+
+    PostGIS adds 5 data types to our database.  Here, we'll use the 'geography' and 'geometry'
+      data types.  
+
+    A 'geography' is a data type based on a sphere, using the round-earth coordinate system.
+      All calculations occur on the globe, taking its curvature into account.
+
+    A 'geometry' is a data type based on a plane, using the Euclidean coordinate system.
+      Calculations occur on straight lines, as opposed to the curvature of a sphere.
+
+
+
+- Creating a Geometry Type From a Well-Known Text
+
+    SELECT ST_GeomFromText('POINT(-74.9233606 42.699992)', 4326);
+    SELECT ST_GeomFromText('LINESTRING(-74.9 42.7, -75.1 42.7)', 4326);
+    SELECT ST_GeomFromText('POLYGON((-74.9 42.7, -75.1 42.7, -75.1 42.6, -74.9 42.7))', 4326);
+    SELECT ST_GeomFromText('MULTIPOINT (-74.9 42.7, -75.1 42.7)', 4326);
+    SELECT ST_GeomFromText('MULTILINESTRING((-76.27 43.1, -76.06 43.08),
+                                            (-76.2 43.3, -76.2 43.4, -76.4 43.1))', 4326);
+    SELECT ST_GeomFromText('MULTIPOLYGON(((-74.92 42.7, -75.06 42.71, -75.07 42.64, -74.92 42.7),
+                                          (-75.0 42.66, -75.0 42.64, -74.98 42.64, -74.98 42.66,
+                                           -75.0 42.66)))', 4326);
+
+
+- Creating a Geography Type From a Well-Known Text
+
+    SELECT ST_GeogFromText('SRID=4326;MULTIPOINT(-74.9 42.7, -75.1 42.7, -74.924 42.6)');

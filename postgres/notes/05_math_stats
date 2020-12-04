@@ -1,0 +1,139 @@
+---------------------------------------------------
+CHAPTER 5 - BASIC MATH AND STATS
+---------------------------------------------------
+
+- Math Operators
+
+    # Math Operators
+    + - * / %
+    ^              # Exponent
+    |/             # Square Root
+    ||/            # Cube Root
+    !              # Factorial
+
+
+    # Basic Rules of Return Types
+    1. Two integers return an integer
+    2. A numeric on either side returns a numeric
+    3. Anything with a float returns a double precision
+
+
+    # Examples
+    SELECT 3 ^ 4;
+    SELECT |/ 10;
+    SELECT sqrt(10);
+    SELECT ||/ 27;
+    SELECT 4 !;
+
+
+
+- Example - Calculating Percent Change
+
+    # Create table for old and new values
+    CREATE TABLE percent_change (
+        department varchar(20),
+        spend_2014 numeric(10, 2),
+        spend_2017 numeric(10, 2)
+    );
+
+
+    # Add data to table
+    INSERT INTO percent_change
+    VALUES
+      ('Building', 250000, 289000),
+      ('Assessor', 178556, 179500),
+      ('Library', 87777, 90001),
+      ('Clerk', 451980, 650000),
+      ('Police', 250000, 223000),
+      ('Recreation', 199000, 195000);
+
+
+    # Now, calculate percent change
+    SELECT department,
+           spend_2014,
+           spend_2017,
+           round( (spend_2017 - spend_2014) / spend_2014 * 100, 1 )
+             AS 'pct_change'
+    FROM percent_change;
+
+
+
+- The 'avg' and 'sum' Functions
+
+    # Calculate the total population of all counties
+    SELECT sum(p0010001) AS 'County Sum'
+    FROM us_counties_2010;
+
+
+    # Calculate the average population of all counties
+    SELECT round(avg(p0010001), 0) AS 'County Average'
+    FROM us_counties_2010;
+
+
+
+- Percentile Functions
+
+    # Create test table
+    CREATE TABLE percentile_test (
+        numbers integer
+    );
+
+    # Add test data to table
+    INSERT INTO percentile_test (numbers) VALUES
+        (1), (2), (3), (4), (5), (6);
+
+
+    # Get median from continuous values (can be decimal between values)
+    SELECT percentile_cont(.5)
+    WITHIN GROUP (ORDER BY numbers)
+    FROM percentile_test;
+
+    percentile_cont
+    ---------------
+    3.5
+
+
+    # Get median from discrete values (must be in the set)
+    SELECT percentile_disc(.5)
+    WITHIN GROUP (ORDER BY numbers)
+    FROM percentile_test;
+
+    percentile_dist
+    ---------------
+    3
+
+
+
+- Example - Calculating Quartiles
+
+    # Get quartiles from census data
+    SELECT percentile_cont(array[.25, .5, .75])
+    WITHIN GROUP (ORDER BY p0010001) AS 'quartiles'
+    FROM us_counties_2010;
+
+    quartiles
+    ---------------------
+    {11104.5,25857,66699}
+
+
+    # To get values as rows instead of array, use unnest()
+    SELECT unnest(
+               percentile_cont(array[.25, .5, .75])
+               WITHIN GROUP (ORDER BY p0010001)
+               ) AS 'quartiles'
+    FROM us_counties_2010;
+
+    quartiles
+    ---------
+      11104.5
+        25857
+        66699
+
+
+
+- Finding the Mode
+
+    # Built-in mode() function
+    SELECT mode()
+    WITHIN GROUP (ORDER BY p0010001)
+    FROM us_counties_2010;

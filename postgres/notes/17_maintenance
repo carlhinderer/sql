@@ -1,0 +1,86 @@
+---------------------------------------------------
+CHAPTER 17 - MAINTENANCE
+---------------------------------------------------
+
+- Recovering Unused Space with Vacuum
+
+    To prevent database files from growing out of control, we can use the VACUUM command.
+
+    When a value in a row is updated, the database creates a new version of that row with
+      the updated vaule, but it doesn't delete the old row.  These are known as 'dead rows'.
+      Similarly, when a row is deleted, it lives on as a dead row in the table.
+
+    The database uses dead rows to provide for certain features in environments in which 
+      multiple transactions are occurring and old versions of rows might be needed by
+      transactions other than the current one.
+
+    Running VACUUM designates the space occupied by dead rows to use again, but it doesn't
+      return the space to your system's disk.  To return unused space to the disk, the
+      VACUUM FULL command must be used.
+
+    Although VACUUM can be run on demand, by default Postgres runs the 'autovacuum'
+      background process that monitors the database and runs VACUUM as needed.
+
+
+
+- Tracking Table Space
+
+    # Create a table
+    CREATE TABLE vacuum_test (
+        integer_column integer
+    );
+
+
+    # Get the size of the table
+    SELECT pg_size_pretty (
+        pg_total_relation_size('vacuum_test')
+    );
+
+
+
+- Monitoring the autovacuum Process
+
+    # Check the activity of autovacuum
+    SELECT relname,
+           last_vacuum,
+           last_autovacuum,
+           vacuum_count,
+           autovacuum_count
+    FROM pg_stat_all_tables
+    WHERE relname = 'vacuum_test';
+
+
+
+- Running VACUUM Manually
+
+    # Run manually
+    VACUUM vacuum_test;
+
+    # Run manually to reduce table size
+    VACUUM FULL vacuum_test;
+
+
+
+- Changing Server Settings
+
+    # Locate the postgresql.conf
+    SHOW config_file;
+
+    # Reload the postgresql.conf
+    pg_ctl reload -D '/path/to/file'
+
+    # Show location of data directory
+    SHOW data_directory;
+
+
+
+- Backing Up and Restoring Database
+
+    # Back up the 'analysis' database
+    pg_dump -d analysis -U user_name -Fc > analysis_backup.sql
+
+    # Back up a single table
+    pg_dump -t 'train_rides' -d analysis -U user_name -Fc > train_backup.sql
+
+    # Restore a backup
+    pg_restore -C -d postgres -U user_name analysis_backup.sql

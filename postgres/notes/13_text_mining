@@ -1,0 +1,372 @@
+---------------------------------------------------
+CHAPTER 13 - TEXT MINING
+---------------------------------------------------
+
+- String Formatting Functions
+
+    # Casing
+    upper('str')       # Uppercase
+    lower('str')       # Lowercase
+    initcap('str')     # Capitalize
+
+
+    # Length and Position
+    char_length('str')           # String length
+    position('substr' in 'str')  # Substring position, 1-indexed
+
+
+    # Removing characters
+    trim('substr' from 'string')          # Remove all substrs
+    trim(trailing 'substr' from 'str')    # Removes trailing substr
+    ltrim('str', 'substr')                # Removes substr from left
+    rtrim('str', 'substr')                # Removes substr from right
+
+
+    # Extracting and replacing characters
+    left('str', n)                        # Remove and return n characters from beginning
+    right('str', n)                       # Remove and return n characters from end
+
+
+
+- Regular Expression Matchers
+
+    Expression       Description
+    ---------------------------------------------------------------------------------------
+    .                A dot is a wildcard that finds any character except a newline.
+    [FGz]            Any character in the square brackets. Here, F, G, or z.
+    [a-z]            A range of characters. Here, lowercase a to z.
+    [^a-z]           The caret negates the match. Here, not lowercase a to z.
+
+    \w               Any word character or underscore. Same as [A-Za-z0-9_].
+    \d               Any digit.
+    \s               A space.
+    \t               Tab character.
+    \n               Newline character.
+    \r               Carriage return character.
+
+    ^                Match at the start of a string.
+    $                Match at the end of a string.
+    ?                Get the preceding match zero or one time.
+    *                Get the preceding match zero or more times.
+    +                Get the preceding match one or more times.
+
+    {m}              Get the preceding match exactly m times.
+    {m,n}            Get the preceding match between m and n times.
+    a|b              The pipe denotes alternation. Find either a or b.
+    ( )              Create and report a capture group or set precedence.
+    (?: )            Negate the reporting of a capture group.
+
+
+
+- Regex Extraction Examples
+
+    # Extract year from string
+    SELECT substring('The game starts at 7 p.m. on May 2, 2019.' from '\d{4}');
+
+
+    # Extract date in MM/DD/YY format
+    SELECT crime_id,
+        regexp_match(original_text, '\d{1,2}\/\d{1,2}\/\d{2}')
+    FROM crime_reports;
+
+    crime_id    regexp_match
+    --------    ------------
+           1    {4/16/17}
+           2    {4/8/17}
+           3    {4/4/17}
+           4    {04/10/17}
+           5    {04/09/17}
+
+
+    # Extract all dates if more than one is present
+    SELECT crime_id,
+        regexp_matches(original_text, '\d{1,2}\/\d{1,2}\/\d{2}', 'g')
+    FROM crime_reports;
+
+    crime_id    regexp_matches
+    --------    --------------
+           1    {4/16/17}
+           1    {4/17/17}
+           2    {4/8/17}
+           3    {4/4/17}
+           4    {04/10/17}
+           5    {04/09/17}
+
+
+    # Extract all relevant info
+    SELECT
+        regexp_match(original_text, '(?:C0|SO)[0-9]+') AS case_number,
+        regexp_match(original_text, '\d{1,2}\/\d{1,2}\/\d{2}') AS date_1,
+        regexp_match(original_text, '\n(?:\w+ \w+|\w+)\n(.*):') AS crime_type,
+        regexp_match(original_text, '(?:Sq.|Plz.|Dr.|Ter.|Rd.)\n(\w+ \w+|\w+)\n')
+            AS city
+    FROM crime_reports;
+
+
+
+- Extracting Text From regexp_match() Results
+
+    # Extract case numbers
+    SELECT
+        crime_id,
+        (regexp_match(original_text, '(?:C0|SO)[0-9]+'))[1]
+            AS case_number
+    FROM crime_reports;
+
+    crime_id    case_number
+    --------    -----------
+           1    C0170006614
+           2    C0170006162
+           3    C0170006079
+           4    SO170006250
+           5    SO170006211
+
+
+
+- Using Regex's in WHERE Clauses
+
+    Besides filtering queries with LIKE and ILIKE in WHERE clauses, we can also use regular
+      expressions to perform more complex matches.
+
+    We use ~ to make case-sensitive matches and ~* to make case-insensitive matches.
+
+
+    SELECT geo_name
+    FROM us_counties_2010
+    WHERE geo_name ~* '(.+lade.+|.+lare.+)'
+    ORDER BY geo_name;
+
+    SELECT geo_name
+    FROM us_counties_2010
+    WHERE geo_name ~* '.+ash.+' AND geo_name !~ 'Wash.+'
+    ORDER BY geo_name;
+
+
+
+- Additional Regex Functions
+
+    # Replace a matched pattern with substitute text
+    regexp_replace(string, pattern, replacement text)
+    SELECT regexp_replace('05/12/2018', '\d{4}', '2017');
+
+
+    # Split on a delimiter into rows
+    regexp_split_to_table(string, pattern)
+    SELECT regexp_split_to_table('Four,score,and,seven,years,ago', ',');
+
+    regexp_split_to_table
+    ---------------------
+    Four
+    score
+    and
+    seven
+    years
+    ago
+
+
+    # Split on a delimiter into array
+    regexp_split_to_array(string, pattern)
+    SELECT regexp_split_to_array('Phil Mike Tony Steve', ' ');
+
+    regexp_split_to_array
+    ----------------------
+    {Phil,Mike,Tony,Steve}
+
+
+
+- Full Text Search in Postgres
+
+    Postgres's implementation of text search includes 2 data types.  
+
+    The 'tsvector' data type represents the text to be searched and to be stored in an 
+      optimized form.
+
+    The 'tsquery' data type represents the search query terms and operators.
+
+
+
+- Storing Text as Lexemes with 'tsvector'
+
+    The 'tsvector' data type reduces text to a sorted list of 'lexemes', which are units of
+      meaning in languagte.  
+
+    Lexemes are words without the variations created by suffixes.  For example, the 'tsvector' 
+      format would store the words 'washes', 'washed', and 'washing' as the lexeme 'wash', 
+      while remembering the word's position in the original text.  Converting text to 'tsvector' 
+      also removes small 'stop words' that don't play a role in search.
+
+
+    # Normalize a string to a tsvector
+    SELECT to_tsvector('I am walking across the sitting room to sit with you.');
+
+    'across':4 'room':7 'sit':6,9 'walk':3
+
+
+
+- Creating Search Terms with 'tsquery'
+
+    The 'tsquery' data type represents the full text query, again optimized as lexemes.  
+      It also provides operators for controlling the search (&, |, !, and <->).
+
+
+    # Convert search terms to 'tsquery' data
+    SELECT to_tsquery('walking & sitting');
+
+    'walk' & 'sit'
+
+
+
+- Using the @@ Match Operator for Searching
+
+    With the text and search terms converted to the full text search data types, we can use
+      the @@ match operator to check whether a query matches text.
+
+
+    # Returns true, since 'walk' and 'sit' lexemes are both present
+    SELECT to_tsvector('I am walking across the sitting room') @@ to_tsquery('walking & sitting');
+
+    # Returns false, since 'run' lexeme is not present
+    SELECT to_tsvector('I am walking across the sitting room') @@ to_tsquery('walking & running');
+
+
+
+- Creating a Table for Full Text Search
+
+    Now, we'll analyze a set of presidential speaches since WW2.  We want to convert the original
+      speech text into a 'tsvector' to optimize it for searching.  But first, we'll convert the
+      original file into a table.
+
+
+    # Create table to hold presidential speeches
+    CREATE TABLE president_speeches (
+        sotu_id serial PRIMARY KEY,
+        president varchar(100) NOT NULL,
+        title varchar(250) NOT NULL,
+        speech_date date NOT NULL,
+        speech_text text NOT NULL,
+        search_speech_text tsvector
+    );
+    
+
+    # Copy the csv into the table
+    COPY president_speeches (president, title, speech_date, speech_text)
+    FROM '~/YourDirectory/sotu-1946-1977.csv'
+    WITH (FORMAT CSV, DELIMITER '|', HEADER OFF, QUOTE '@');
+
+
+    # Convert the contents of the 'speech_text' column to a tsvector
+    UPDATE president_speeches
+    SET search_speech_text = to_tsvector('english', speech_text);
+
+
+    # Create a GIN index on column to speed up searches
+    CREATE INDEX search_idx ON president_speeches USING gin(search_speech_text);
+
+
+
+- Searching Speech Text
+
+    Now, we'll search the 'speech_text' column.  
+
+
+    # List the speeches in which the president mentioned Vietnam
+    SELECT president, speech_date
+    FROM president_speeches
+    WHERE search_speech_text @@ to_tsquery('Vietnam')
+    ORDER BY speech_date;
+
+    president            speech_date
+    -----------------    -----------
+    John F. Kennedy      1961-05-25
+    Lyndon B. Johnson    1966-01-12
+    Lyndon B. Johnson    1967-01-10
+    Lyndon B. Johnson    1968-01-17
+    Lyndon B. Johnson    1969-01-14
+    Richard M. Nixon     1970-01-22
+    Richard M. Nixon     1972-01-20
+    Richard M. Nixon     1973-02-02
+    Gerald R. Ford       1975-01-15
+    Gerald R. Ford       1977-01-12
+
+
+
+- Showing Search Result Location
+
+    We can use the 'ts_headline()' function to see where our search terms appeared in the
+      text.  It displays one or more highlighted search terms surrounded by adjacent
+      words.
+
+
+    SELECT president,
+           speech_date,
+           ts_headline(speech_text, to_tsquery('Vietnam'),
+                       'StartSel = <,
+                        StopSel = >,
+                        MinWords=5,
+                        MaxWords=7,
+                        MaxFragments=1')
+    FROM president_speeches
+    WHERE search_speech_text @@ to_tsquery('Vietnam');
+
+
+    president            speech_date    ts_headline
+    -----------------    -----------    -------------------------------------------------
+    John F. Kennedy      1961-05-25     twelve months in <Vietnam> alone--by subversives
+    Lyndon B. Johnson    1966-01-12     bitter conflict in <Vietnam>. Later
+    Lyndon B. Johnson    1967-01-10     <Vietnam>--is not a simple one. There
+    Lyndon B. Johnson    1968-01-17     been held in <Vietnam>--in the midst
+    Lyndon B. Johnson    1969-01-14     conflict in <Vietnam>, the dangers of nuclear
+    Richard M. Nixon     1970-01-22     <Vietnam> in a way that our generation
+    --snip--
+
+
+
+- Using Multiple Search Terms
+
+    As another example, we could look for speeches where the president mentioned the word
+      'transportation' but didn't discuss 'roads'.  
+
+    SELECT president,
+           speech_date
+           ts_headline(speech_text, to_tsquery('transportation & !roads'),
+                       'StartSel = <,
+                        StopSel = >,
+                        MinWords=5,
+                        MaxWords=7,
+                        MaxFragments=1')
+    FROM president_speeches
+    WHERE search_speech_text @@ to_tsquery('transportation & !roads');
+
+    president            speech_date    ts_headline
+    -----------------    -----------    -------------------------------------------------
+    Harry S. Truman      1947-01-06     such industries as <transportation>, coal, oil, steel
+    Harry S. Truman      1949-01-05     field of <transportation>
+    John F. Kennedy      1961-01-30     Obtaining additional air <transport> mobility--and obtaining
+    Lyndon B. Johnson    1964-01-08     reformed our tangled <transportation> and transit policies
+    --snip--
+
+
+
+- Searching for Adjacent Words
+
+    Finally, we'll use the distance (<->) operator to find adjacent words.  Alternatively, we can
+      place a number between the < and > signs to find terms that many words apart.
+
+
+    # Find the word 'military' followed by the word 'defense'
+    SELECT president,
+           speech_date,
+           ts_headline(speech_text, to_tsquery('military <-> defense'),
+                       'StartSel = <,
+                        StopSel = >,
+                        MinWords=5,
+                        MaxWords=7,
+                        MaxFragments=1')
+    FROM president_speeches
+    WHERE search_speech_text @@ to_tsquery('military <-> defense');
+
+
+
+- Ranking Query Matches By Relevance
+
+    

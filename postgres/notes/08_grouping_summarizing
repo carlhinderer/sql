@@ -1,0 +1,166 @@
+---------------------------------------------------
+CHAPTER 8 - GROUPING & SUMMARIZING
+---------------------------------------------------
+
+- Counting Rows
+
+    # Count rows in a table
+    SELECT count(*)
+    FROM employees;
+
+
+    # Count rows which have data in a specific column
+    SELECT count(salary)
+    FROM employees;
+
+
+    # Count distinct values in a column
+    SELECT count(DISTINCT department)
+    FROM employees;
+
+
+
+- Minimum and Maximum Values
+
+    # Minimum
+    SELECT min(salary)
+    FROM employees;
+
+
+    # Maximum
+    SELECT max(salary)
+    FROM employees;
+
+
+
+- Aggregating Data Using GROUP BY
+
+    Note that GROUP BY eliminates duplicate values from the results, similar to DISTICT.
+
+    # Return state abbreviations in lexicographic order
+    SELECT state_abbr
+    FROM employees
+    GROUP BY state_abbr
+    ORDER BY state_abbr;
+
+    stabr
+    -----
+    AK
+    AL
+    AR
+    AS
+    AZ
+    CA
+    --snip--
+    WV
+    WY
+
+
+    # Sort by city, then state_abbr
+    SELECT city, state_abbr
+    FROM employees
+    GROUP BY city, state_abbr
+    ORDER BY city, state_abbr
+
+    city          stabr
+    ----------    -----
+    ABBEVILLE     AL
+    ABBEVILLE     LA
+    ABBEVILLE     SC
+    ABBOTSFORD    WI
+    ABERDEEN      ID
+    ABERDEEN      SD
+    ABERNATHY     TX
+    --snip--
+
+
+
+- Combining GROUP BY with count()
+
+    SELECT state_abbr, count(*)
+    FROM employees
+    GROUP BY state_abbr
+    ORDER BY count(*) DESC;
+
+    stabr    count
+    -----    -----
+    NY         756
+    IL         625
+    TX         556
+    IA         543
+    PA         455
+    MI         389
+    WI         381
+    MA         370
+    --snip--
+
+
+
+- Using GROUP BY on Multiple Columns with count()
+
+    SELECT state_abbr, department, count(*)
+    FROM employees
+    GROUP BY state_abbr, department
+    ORDER BY state_abbr ASC, count(*) DESC;
+
+    stabr    stataddr    count
+    -----    --------    -----
+    AK       HR             70
+    AK       Finance        10
+    AK       Sales           5
+    AL       Sales         221
+    AL       IT              3
+    AR       Finance        58
+    AS       IT              1
+    AZ       Sales          91
+    --snip--
+
+
+
+- Example - Grouping By Percent Change
+
+    # Pct change in sales, by state
+    SELECT state_abbr,
+           sum(2014_sales.amount) AS sales_2014,
+           sum(2013_sales.amount) AS sales_2013,
+           round( (CAST(sum(2014_sales.amount) AS decimal(10, 1)) - sum(2013_sales.amounts)) /
+               sum(2013_sales.amount) * 100, 2) AS pct_change
+    FROM 2014_sales, 2013_sales
+    WHERE 2014_sales.amount >= 0 AND 2013_sales.amount >= 0
+    GROUP BY 2014_sales.state_abbr
+    ORDER BY pct_change DESC;
+
+    stabr     sales_2014     sales_2013    pct_change
+    -----    -----------    -----------    ----------
+    GU            103593          60763         70.49
+    DC           4230790        2944774         43.67
+    LA          17242110       15591805         10.58
+    MT           4582604        4386504          4.47
+    AL          17113602       16933967          1.06
+    AR          10762521       10660058          0.96
+    KY          19256394       19113478          0.75
+    CO          32978245       32782247          0.60
+    SC          18178677       18105931          0.40
+    SD           3899554        3890392          0.24
+    MA          42011647       42237888         -0.54
+    AK           3486955        3525093         -1.08
+    ID           8730670        8847034         -1.32
+    NH           7508751        7675823         -2.18
+    WY           3666825        3756294         -2.38
+    --snip--
+    RI           5259143        6612167        -20.46
+    NC          33952977       43111094        -21.24
+    PR            193279         257032        -24.80
+    GA          28891017       40922598        -29.40
+    OK          13678542       21171452        -35.39
+
+
+
+- Filtering Aggregate Queries Using HAVING
+
+    # Filter the results of an aggregate query
+    SELECT state_abbr, count(*)
+    FROM employees
+    GROUP BY state_abbr
+    ORDER BY count(*) DESC
+    HAVING count(*) > 100;

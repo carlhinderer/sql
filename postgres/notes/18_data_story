@@ -1,0 +1,111 @@
+---------------------------------------------------
+CHAPTER 18 - TELLING THE STORY OF YOUR DATA
+---------------------------------------------------
+
+- 1. Start With a Question
+
+       Start by trying to observe your community around you, and see if you notice changes.
+         If you see more 'For Sale' signs popping up around town, start asking questions.
+         If you're a journalist, you might find a new story.  If you're a business owner,
+         you might find a new marketing opportunity.
+
+       If you see a trend occurring in your industry, you might find a new business
+         opportunity.  If you suspect that sales of a product have become sluggish, you
+         can use data analysis to adjust your business plan.
+
+       Keep track of these ideas and prioritize them according to their potential value.
+
+
+- 2. Document Your Process
+
+       Before delving into analysis, consider how to make your process transparent and
+         reproducible.  Others should be able to reproduce your work.  
+
+       In addition, make sure you document enough information so that if you set the 
+         project aside for several weeks, you won't have a problem picking it up again.
+
+
+- 3. Gather Your Data
+
+       If you're working for an organization that already has the data you need, you are all set!
+         Otherwise, you'll have to do some digging.  
+
+       A good start is to ask experts what sources they use.  Browsing government websites is often
+         a good source of data.  If the data spans several years, it is usually better to 
+         examine 5-10 years or more, rather than just 1 or 2 years.
+
+
+- 4. No Data? Build Your Own Database
+
+       Sometimes, no one has the data you need.  If you have the time, patience, and a 
+         methodology, you might be able to build your own data set.  
+
+
+- 5. Assess The Data's Origins
+
+       After you've identified a data set, find as much information about its origins and
+         maintenance methods as you can.  Governments and institutions gather data in all sorts
+         of ways, and some methods produce data that is more credible and standardized than others.
+
+       The origins of a data set might also affect how you analyze the data and report your
+         findings.  For example, the Decennial Census is a complete count of the population, while
+         the American Community Survey is drawn from only a sample of households.  It would be
+         irresponsible to report on the ACS without considering how the margin of error could 
+         make differences between numbers insignificant.
+
+
+- 6. Interview the Data with Queries
+
+       Once you have your data, understand its origins, and have it loaded into your database,
+         you can explore it with queries.  A good place to start is with aggregates.  Counts, sums,
+         sorting, and grouping by column values should reveal minimum and maximum values, 
+         potential issues with duplicate values, and a sense of the general scope of your data.
+
+       If your database contains multiple, related tables, try joins to make sure you understand
+         how the tables relate.  Using LEFT JOINs and RIGHT JOINs should show whether key values
+         from one table are missing in another.
+
+
+- 7. Consult the Data's Owner
+
+       After exploring your database and forming early conclusions about the quality and trends
+         you observed, take some time to bring any questions to a person who knows the data well.
+         This person might be the agency or firm who gave you the data, or it might be an 
+         analyst who worked with the data before.
+
+       To goal is to help do the following:
+         - Understand the limits of the data
+         - Make sure you have a complete data set
+         - Determine whether the data suits your needs
+
+
+- 8. Identify Key Indicators and Trends Over Time
+
+       When you're satisfied that you understand the data and are confident in its
+         trustworthiness, and the appropriateness of your analysis, the next step is to run
+         queries to identify key indicators and trends over time.
+
+       To identify trends, use this process:
+         - Choose an indicator to track (ie percentage of people in NYC taxis over 60)
+         - Track the indicator over multiple years to see how it has changed
+
+
+- 9. Ask Why
+
+       Data analysis can tell you what happened, but it doesn't usually indicate why something
+         happened.  To learn why something happened, it's worth revisiting the data with experts
+         in the topic or the owners of the data.
+
+
+- 10. Communicate Your Findings
+
+       Tips for presenting information:
+         - Identify an overarching theme based on your findings
+         - Present overall numbers to show the greatest trends
+         - Highlight specific examples that support the trend
+         - Acknowledge examples counter to the overall trend
+         - Stick to the facts
+         - Provide expert opinion
+         - Visualize numbers using bar charts or line charts
+         - Cite the source of the data and what you analysis includes or omits
+         - Share your data

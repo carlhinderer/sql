@@ -1,0 +1,280 @@
+---------------------------------------------------
+CHAPTER 7 - TABLE DESIGN
+---------------------------------------------------
+
+- Rules for Identifiers
+
+    1. Don't quote identifiers when you create them.  If you do, you'll have to put quotes
+         around the identifier each time you reference it.
+
+    2. Use snake case.
+
+    3. Make names easy to understand and avoid cryptic abbreviations.
+
+    4. Use plural names for table names.
+
+    5. The Postgres limit for identifiers is 63 characters.
+
+
+
+- Types of Constraints
+
+    CHECK      = evaluates whether the data falls within values we specify
+    UNIQUE     = ensures that values in a column or group of columns are unique in each row
+    NOT NULL   = prevents NULL values in a column
+
+
+
+- Natural vs Surrogate Primary Keys
+
+    - A primary key imposes the following 2 constraints:
+        1. Each column in the key must have a unique value for each row
+        2. No column in the key can have missing values
+
+
+    - A 'natural key' uses one or more of the table's existing columns 
+        (ie a SSN or Drivers license #)
+
+
+    - A 'surrogate key' uses artificial values
+        (ie an auto-incrementing integer or UUID)
+
+
+
+- Assigning a Natural Primary Key
+
+    CREATE TABLE natural_key_example (
+        license_id varchar(10) CONSTRAINT license_key PRIMARY KEY,
+        first_name varchar(50),
+        last_name varchar(50)
+    );
+
+    or
+
+    CREATE TABLE natural_key_example (
+        license_id varchar(10),
+        first_name varchar(50),
+        last_name varchar(50),
+        CONSTRAINT license_key PRIMARY KEY (license_id)
+    );
+
+
+    # Insert data into table
+    INSERT INTO natural_key_example (license_id, first_name, last_name)
+    VALUES ('T229901', 'Mike', 'Smith');
+
+
+
+- Creating a Composite Natural Primary Key
+
+    CREATE TABLE natural_key_composite_example (
+        student_id varchar(10),
+        school_day date,
+        present boolean,
+        CONSTRAINT student_key PRIMARY KEY (student_id, school_day)
+    );
+
+
+    # Insert into table
+    INSERT INTO natural_key_composite_example (student_id, school_day, present)
+    VALUES (775, '1/22/2017', 'Y');
+
+
+
+- Creating an Auto-Incrementing Surrogate Key
+
+    CREATE TABLE surrogate_key_example (
+        order_number bigserial,
+        product_name varchar(50),
+        order_date date,
+        CONSTRAINT order_key PRIMARY KEY (order_number)
+    );
+
+
+    # No need to specify surrogate key when inserting
+    INSERT INTO surrogate_key_example (product_name, order_date)
+    VALUES ('Flux Capacitor', '1985-10-26');
+
+
+
+- Foreign Keys
+
+    CREATE TABLE licenses (
+        license_id varchar(10),
+        first_name varchar(50),
+        last_name varchar(50),
+        CONSTRAINT licenses_key PRIMARY KEY (license_id)
+    );
+
+    # Contains a reference to licenses (1:N relationship)
+    CREATE TABLE registrations (
+        registration_id varchar(10),
+        registration_date date,
+        license_id varhchar(10) REFERENCES licenses (license_id),
+        CONSTRAINT registration_key PRIMARY KEY (registration_id, license_id)
+    );
+
+
+    # Insert into tables
+    INSERT INTO licenses (license_id, first_name, last_name)
+    VALUES ('T229901', 'Lynn', 'Malero');
+
+    INSERT INTO registrations (registration_id, registration_date, license_id)
+    VALUES ('A203391', '3/17/2017', 'T229901');
+
+
+    # This errors out because 'T000001' isn't in licenses
+    INSERT INTO registrations (registration_id, registration_date, license_id)
+    VALUES ('A757772', '3/17/2017', 'T000001');
+
+
+
+- Automatically Deleting Related Records with CASCADE
+
+    We can use DELETE CASCADE to automatically delete any related rows in 'registrations'
+      when we delete a row in 'licenses'.
+
+
+    CREATE TABLE registrations (
+        registration_id varchar(10),
+        registration_date date,
+        license_id varchar(10) REFERENCES licenses (license_id) ON DELETE CASCADE,
+        CONSTRAINT registration_key PRIMARY KEY (registration_id, license_id)
+    );
+
+
+
+- The CHECK Constraint
+
+    The CHECK constraint evaluates whether data added to a column meets the expected criteria,
+      which we specify with a logical test.  If the criteria isn't met, the DB returns an 
+      error.  
+
+
+    CREATE TABLE check_constraint_example (
+        user_id bigserial,
+        user_role varchar(50),
+        salary integer,
+        CONSTRAINT user_id_key PRIMARY KEY (user_id),
+        CONSTRAINT check_role_in_list CHECK (user_role IN ('Admin', 'Staff')),
+        CONSTRAINT check_salary_not_zero CHECK (salary > 0)
+    );
+
+
+    # Other CHECK Examples
+    CONSTRAINT grad_check CHECK (credits >= 120 AND tuition = 'Paid')
+    CONSTRAINT sale_check CHECK (sale_price < retail_price)
+
+
+
+- The UNIQUE Constraint
+
+    CREATE TABLE unique_constraint_example (
+        contact_id bigserial CONSTRAINT contact_id_key PRIMARY KEY,
+        first_name varchar(50),
+        last_name varchar(50),
+        email varchar(200),
+        CONSTRAINT email_unique UNIQUE (email)
+    );
+
+
+
+- The NOT NULL Constraint
+
+    CREATE TABLE not_null_example (
+        student_id bigserial,
+        first_name varchar(50) NOT NULL,
+        last_name varchar(50) NOT NULL,
+        CONSTRAINT student_id_key PRIMARY KEY (student_id)
+    );
+
+
+
+- Adding and Removing Constraints After Table Creation
+
+    # Drop constraints
+    ALTER TABLE table_name DROP CONSTRAINT constraint_name;
+
+    # Drop NOT NULL constraints
+    ALTER TABLE table_name ALTER COLUMN column_name DROP NOT NULL;
+
+
+    # Drop constraint examples
+    ALTER TABLE not_null_example DROP CONSTRAINT student_id_key;
+    ALTER TABLE not_null_example ALTER COLUMN first_name DROP NOT NULL;
+
+
+    # Add constraint examples
+    ALTER TABLE not_null_example ADD CONSTRAINT student_id_key PRIMARY KEY (student_id);
+    ALTER TABLE not_null_example ALTER COLUMN first_name SET NOT NULL;
+
+
+
+- B-Tree: Postgre's Default Index
+
+    - Each time a primary key or a UNIQUE constraint is added to a table, an index on that
+        column is automatically created.
+
+    - Indexes are stored separately from table data, but they're accessed automatically when
+        you run a query and updated every time a row is added or removed from the table.
+
+    - The B-Tree is the default index type in Postgres.  It's created automatically on the
+        columns designated for the primary key or a UNIQUE constraint, and it's also the
+        type created by default when a CREATE INDEX statement is executed.
+
+    - B-Trees (or Balanced Trees) organize the data in a way that when you search for a value,
+        it looks from the top of the tree down through branches until it locates the 
+        data you want.
+
+
+
+- Example - Benchmarking Speedup From Indexes
+
+    # Here, we import a file with 940K NYC street addresses
+    CREATE TABLE new_york_addresses (
+        longitude numeric(9, 6),
+        latitude numeric(9, 6),
+        street_number varchar(10),
+        street varchar(32),
+        unit varchar(7),
+        postcode varchar(5),
+        id integer CONSTRAINT new_york_key PRIMARY KEY
+    );
+
+
+    # Now, import the data
+    COPY new_york_addresses
+    FROM '~/Directory/city_of_new_york.csv'
+    WITH (FORMAT CSV, HEADER);
+
+
+    # Benchmark execution time with no index
+    EXPLAIN ANALYZE SELECT * FROM new_york_addresses
+    WHERE street = 'BROADWAY';
+
+
+    # Results
+    Planning time: 0.617 ms
+    Execution time: 289.838 ms
+
+
+    # Now add the B-Tree index
+    CREATE INDEX street_idx ON new_york_addresses (street);
+
+
+    # Results from re-running the queries
+    Planning time: 0.163 ms
+    Execution time: 5.887 ms
+
+
+
+- Index Considerations
+
+    - Most RDBMS's have several index types.  Consult the documentation if you need a special
+        purpose index.
+
+    - Consider adding indexes to any columns you'll use in table joins.
+
+    - Add indexes to columns that are frequenly used in a WHERE clause.
+
+    - Use EXPLAIN ANALYZE to test performance if you're unsure.  Optimization is a process!

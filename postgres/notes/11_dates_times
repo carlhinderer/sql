@@ -1,0 +1,289 @@
+---------------------------------------------------
+CHAPTER 11 - DATES AND TIMES
+---------------------------------------------------
+
+- Date and Time Data Types
+
+    - date = only the date
+           = using the ISO 8601 YYYY-MM-DD is recommended
+
+    - time = only the time
+           = adding 'with time zone' makes the column time zone aware
+           = using the ISO 8601 format HH:MM:SS is recommended
+           = can add an optional time zone designator
+
+    - timestamp = records the date and time
+                = can add 'with time zone' to make the column time zone aware
+                = the format 'timestamp' with time zone is part of the SQL standard
+                = PostgreSQL also has the shorthand timestamptz, which has the format YYYY-MM-DD HH:MM:SS TZ
+                = can specify time zones in 3 different formats: UTC offset, area/location designator, 
+                                                                 or standard abbreviation
+
+    - interval = holds a value that represents a unit of time expressed in the format 'quantity unit'
+               = doesn’t record the start or end of a period, only its duration
+               = examples include 12 days or 8 hours
+
+    All four data types can track the system clock and the nuances of the calendar. For example, date and 
+      timestamp recognize that June has 30 days. Therefore, June 31 is an invalid 'datetime' value that 
+      causes the database to throw an error. Likewise, the date February 29 is valid only in a leap year, 
+      such as 2020.
+
+
+
+- Extracting the Components of a Timestamp
+
+    # The 'date_part' function extracts a single value
+    SELECT
+        date_part('year', '2019-12-01 18:37:12 EST'::timestamptz) AS "year",
+        date_part('month', '2019-12-01 18:37:12 EST'::timestamptz) AS "month",
+        date_part('day', '2019-12-01 18:37:12 EST'::timestamptz) AS "day",
+        date_part('hour', '2019-12-01 18:37:12 EST'::timestamptz) AS "hour",
+        date_part('minute', '2019-12-01 18:37:12 EST'::timestamptz) AS "minute",
+        date_part('seconds', '2019-12-01 18:37:12 EST'::timestamptz) AS "seconds",
+        date_part('timezone_hour', '2019-12-01 18:37:12 EST'::timestamptz) AS "tz",
+        date_part('week', '2019-12-01 18:37:12 EST'::timestamptz) AS "week",
+        date_part('quarter', '2019-12-01 18:37:12 EST'::timestamptz) AS "quarter",
+        date_part('epoch', '2019-12-01 18:37:12 EST'::timestamptz) AS "epoch";
+
+    year    month    day    hour    minute    seconds    tz    week    quarter    epoch
+    ----    -----    ---    ----    ------    -------    --    ----    -------    ----------
+    2019       12      1      18        37         12    -5      48          4    1575243432
+
+
+    # The SQL-standard 'extract' function does the same thing
+    SELECT
+        extract('year' from '2019-12-01 18:37:12 EST'::timestamptz) AS "year";
+
+
+
+- Creating Datetime Values from Timestamp Components
+
+    It's not unusual to come across a data set in which the year, month, and day exist in 
+      separate columns.  Sometimes, it's helpful to combine them into a single datetime
+      value.
+
+
+    # Make datetime objects
+    make_date(year, month, day)
+    make_time(hour, minute, seconds)
+    make_timestamp(year, month, day, hour, minute, second, time zone)
+
+
+    # Examples
+    SELECT make_date(2018, 2, 22);
+    SELECT make_time(18, 4, 30.3);
+    SELECT make_timestamptz(2018, 2, 22, 18, 4, 30.3, 'Europe/Lisbon');
+
+    2018-02-22
+    18:04:30.3
+    2018-02-22 13:04:30.3-05
+
+
+
+- Retrieving the Current Date and Time
+
+    # Functions to get current date and time
+    current_date
+    current_time
+    current_timestamp   OR   now()
+    loacltime
+    localtimestamp
+
+
+    Note that these functions record the time at the start of the query, so they'll provide
+      the same time throughout the execution of the query regardless of how long the query
+      runs.  
+
+    If we want to instead reflect how the clock changes during the execution of the query,
+      we can use the Postgres-specific 'clock_timestamp()' function to record the current
+      time as it elapses.
+
+
+    # Use current_timestamp and clock_timestamp()
+    CREATE TABLE current_time_example (
+        time_id bigserial,
+        current_timestamp_col timestamp with time zone,
+        clock_timestamp_col timestamp with time zone
+    );
+    
+    INSERT INTO current_time_example (current_timestamp_col, clock_timestamp_col)
+        (SELECT current_timestamp,
+                clock_timestamp()
+         FROM generate_series(1,1000));
+    
+    SELECT * FROM current_time_example;
+
+
+
+- Working with Time Zones
+
+    # Find the time zone setting of your db server
+    SHOW timezone;
+
+
+    # List all time zone names, abbreviations, and their UTC offsets
+    SELECT * FROM pg_timezone_abbrevs;
+    SELECT * FROM pg_timezone_names;
+
+
+    # Look up location names or time zones
+    SELECT *
+    FROM pg_timezone_names
+    WHERE name LIKE 'Europe%';
+
+    name                abbrev    utc_offset    is_dst
+    ----------------    ------    ----------    ------
+    Europe/Amsterdam    CEST      02:00:00      t
+    Europe/Andorra      CEST      02:00:00      t
+    Europe/Astrakhan    +04       04:00:00      f
+    Europe/Athens       EEST      03:00:00      t
+    Europe/Belfast      BST       01:00:00      t
+    --snip--    
+
+
+
+- Setting the Time Zone
+
+    When Postgres was installed, the default time zone was set in 'postgresql.conf'.  To 
+      change it, we must edit the file and restart the server.  However, we can more easily
+      change the pgAdmin client's time zone on a per-session basis, which will persist
+      as long as we're connected to the server.
+
+
+    # Change time zone in current session
+    SET timezone TO 'US/Pacific';
+
+    # Insert a datetime value
+    CREATE TABLE time_zone_test (
+        test_date timestamp with time zone
+    );
+    INSERT INTO time_zone_test VALUES ('2020-01-01 4:00');
+
+
+    # Get date time in 'US/Pacific'
+    SELECT test_date
+    FROM time_zone_test;
+
+    test_date
+    ----------------------
+    2020-01-01 04:00:00-08
+
+
+    # Change time zone
+    SET timezone TO 'US/Eastern';
+
+
+    # Get date time in 'US/Eastern'
+    SELECT test_date
+    FROM time_zone_test;
+
+
+    # Get date time in 'Asia/Seoul'
+    SELECT test_date AT TIME ZONE 'Asia/Seoul'
+    FROM time_zone_test;
+
+    timezone
+    -------------------
+    2020-01-01 21:00:00
+
+
+
+- Calculations with Dates and Times
+
+    We can perform simple arithmetic on datetime and interval types the same way we can on
+      numbers.  Addition, subtraction, multiplication, and division can all be used.
+
+
+    SELECT '9/30/1929'::date - '9/27/1929'::date;
+
+    Returns
+    -------
+    3
+
+
+    SELECT '9/30/1929'::date + '5 years'::interval;
+
+    Returns
+    -------
+    timestamp(2034, 9, 30)
+
+
+
+- Finding Patterns in NYC Taxi Data
+
+    # Set timezone
+    SET timezone TO 'US/Eastern';
+
+
+    # Count rides by hour using pickup time
+    SELECT
+        date_part('hour', tpep_pickup_datetime) AS trip_hour,
+        count(*)
+    FROM nyc_yellow_taxi_trips_2016_06_01
+    GROUP BY trip_hour
+    ORDER BY trip_hour;
+
+    trip_hour    count
+    ---------    -----
+            0     8182
+            1     5003
+            2     3070
+            3     2275
+            4     2229
+            5     3925
+            6    10825
+            7    18287
+            8    21062
+            9    18975
+           10    17367
+           11    17383
+           12    18031
+           13    17998
+           14    19125
+           15    18053
+           16    15069
+           17    18513
+           18    22689
+           19    23190
+           20    23098
+           21    24106
+           22    22554
+           23    17765
+
+
+    # Calculate median trip time by hour
+    SELECT
+        date_part('hour', tpep_pickup_datetime) AS trip_hour,
+        percentile_cont(.5)
+    WITHIN GROUP (ORDER BY
+            tpep_dropoff_datetime - tpep_pickup_datetime) AS median_trip
+    FROM nyc_yellow_taxi_trips_2016_06_01
+    GROUP BY trip_hour
+    ORDER BY trip_hour;
+
+    date_part    median_trip
+    ---------    -----------
+            0    00:10:04
+            1    00:09:27
+            2    00:08:59
+            3    00:09:57
+            4    00:10:06
+            5    00:07:37
+            6    00:07:54
+            7    00:10:23
+            8    00:12:28
+            9    00:13:11
+           10    00:13:46
+           11    00:14:20
+           12    00:14:49
+           13    00:15:00
+           14    00:14:35
+           15    00:14:43
+           16    00:14:42
+           17    00:14:15
+           18    00:13:19
+           19    00:12:25
+           20    00:11:46
+           21    00:11:54
+           22    00:11:37
+           23    00:11:14

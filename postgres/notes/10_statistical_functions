@@ -1,0 +1,299 @@
+---------------------------------------------------
+CHAPTER 10 - STATISTICAL FUNCTIONS
+---------------------------------------------------
+
+- Importing the Dataset
+
+    In this chapter, we are querying a dataset that tracks education and income by county
+      from 2011-2015.
+
+
+    # Create table for data set
+    CREATE TABLE acs_2011_2015_stats (
+        geoid varchar(14) CONSTRAINT geoid_key PRIMARY KEY,
+        county varchar(50) NOT NULL,
+        st varchar(20) NOT NULL,
+        pct_travel_60_min numeric(5, 3) NOT NULL,
+        pct_bachelors_higher numeric(5, 3) NOT NULL,
+        median_hh_income integer,
+        CHECK (pct_masters_higher <= pct_bachelors_higher)
+    );
+
+
+    # Import the data set
+    COPY acs_2011_2015_stats
+    FROM '~/Directory/acs_2011_2015_stats.csv'
+    WITH (FORMAT CSV, HEADER, DELIMITER ',');
+
+
+    # Description of Columns
+    pct_travel_60_min        # Percentage of workers age 16+ who commute 60+ mins to work
+    pct_bachelors_higher     # Percentage of people age 25+ who have a bachelors or higher
+    pct_masters_higher       # Percentage of people age 25+ who have a masters or higher
+    median_hh_income         # County's median household income in 2015-adjusted dollars
+
+
+
+- Pearson Correlation Coefficients (r)
+
+    The Pearson Correlation Coefficient (r) is a measure for quantifying the strength of a 
+      linear relationship between two variables.
+
+      - The r values fall between -1 and 1.  
+      - Either end of the range indicates a perfect correlation.
+      - Values near 0 indicate a random distribution with no correlation.
+      - A positive r value indicates a 'direct relationship'.
+      - A negative r value indicates an 'inverse relationship'.
+
+
+    Interpreting Correlation Coefficients
+            0        # No relationship
+      .01-.29        # Weak relationship
+      .30-.59        # Moderate relationship
+      .60-.99        # Strong relationship
+            1        # Perfect relationship
+
+
+
+- Measuring Correlation with corr(Y, X)
+
+    Here, we use the corr(Y, X) function to measure correlation and investigate what 
+      relationship exists, if any, between the percentage of people in a county who have 
+      attained a bachelor's degree and the median household income in that county.
+
+    The corr(Y, X) function is one of several 'binary aggregate functions' in SQL and is
+      so named because these functions accept 2 inputs.  Y is the dependent variable and
+      X is the independent variable.  
+
+
+    # Get the correlation between bachelor's degrees and income
+    SELECT corr(median_hh_income, pct_bachelors_higher) AS bachelors_income_r
+    FROM acs_2011_2015_stats;
+
+    bachelors_income_r
+    ------------------
+    0.682185675451399
+
+
+
+- Checking Additional Correlations
+
+    # Check for additional correlations with travel
+    SELECT
+      round(
+          corr(median_hh_income, pct_bachelors_higher)::numeric, 2
+          ) AS bachelors_income_r,
+      round(
+          corr(pct_travel_60_min, median_hh_income)::numeric, 2
+          ) AS income_travel_r,
+      round(
+          corr(pct_travel_60_min, pct_bachelors_higher)::numeric, 2
+          ) AS bachelors_travel_r
+    FROM acs_2011_2015_stats;
+
+    bachelors_income_r    income_travel_r    bachelors_travel_r
+    ------------------    ---------------    ------------------
+                  0.68               0.05                 -0.14
+
+
+
+- Predicting Values with Regression Analysis
+
+    We can also calculate the least-squares regression line using the 'regr_slope' and
+      'regr_intercept' functions.
+
+
+    # Calculate r
+    SELECT
+      round(
+          regr_slope(median_hh_income, pct_bachelors_higher)::numeric, 2
+          ) AS slope,
+      round(
+          regr_intercept(median_hh_income, pct_bachelors_higher)::numeric, 2
+          ) AS y_intercept
+    FROM acs_2011_2015_stats;
+
+    slope     y_intercept
+    ------    -----------
+    926.95       27901.15
+
+
+    This predicts that for each one-unit increase in bachelor's degress percentage, we can 
+      expect household income will increase by 926.65.  In a county in which the bachelor's
+      degree percentage is zero, the household income is 27901.15.
+
+
+
+- Finding the Effect of an Independent Variable with r-squared
+
+    Next, we calculate the 'coefficient of determination' (aka 'r-squared').  This tells us
+      the extent to which the variation in the independent variable explains the variation
+      in the dependent variable.  To find it, we use the 'regr_r2' function.
+
+
+    # Calculate r-squared
+    SELECT round(        
+               regr_r2(median_hh_income, pct_bachelors_higher)::numeric, 3
+                ) AS r_squared
+    FROM acs_2011_2015_stats;
+
+    r_squared
+    ---------
+        0.465
+
+
+    So, 46.5% of the variation in median household income in a county can be explained by the
+      percentage of people with a bachelor's degree or higher in that county.
+
+
+
+- Ranking with rank() and dense_rank()
+
+    The ANSI SQL functions 'rank' and 'dense_rank' are 'window functions', which perform 
+      calculations across sets of rows we specify using the OVER clause.  Unlike aggregate
+      functions, which group rows while calculating results, window functions present
+      results for each row in the table.
+
+    The difference between 'rank' and 'dense_rank' is the way they handle the next rank after
+      a tie.  'rank' includes a gap in the rank order, while 'dense_rank' does not.
+
+
+    # Create table to store data on widget companies
+    CREATE TABLE widget_companies (
+        id bigserial,
+        company varchar(30) NOT NULL,
+        widget_output integer NOT NULL
+    );
+
+
+    # Insert data on widget companies
+    INSERT INTO widget_companies (company, widget_output)
+    VALUES
+        ('Morse Widgets', 125000),
+        ('Springfield Widget Masters', 143000),
+        ('Best Widgets', 196000),
+        ('Acme Inc.', 133000),
+        ('District Widget Inc.', 201000),
+        ('Clarke Amalgamated', 620000),
+        ('Stavesacre Industries', 244000),
+        ('Bowers Widget Emporium', 201000);
+
+
+    # Rank widget companies by their widget output
+    SELECT company,
+           widget_output,
+           rank() OVER (ORDER BY widget_output DESC),
+           dense_rank() OVER (ORDER BY widget_output DESC)
+    FROM widget_companies;
+
+
+    company                       widget_output    rank    dense_rank
+    --------------------------    -------------    ----    ----------
+    Clarke Amalgamated                   620000       1             1
+    Stavesacre Industries                244000       2             2
+    Bowers Widget Emporium               201000       3             3
+    District Widget Inc.                 201000       3             3
+    Best Widgets                         196000       5             4
+    Springfield Widget Masters           143000       6             5
+    Acme Inc.                            133000       7             6
+    Morse Widgets                        125000       8             7
+
+
+
+- Ranking Within Subgroups with PARTITION BY
+
+    Sometimes, you want to produce ranks within groups of rows in a table.  For example,
+      we want to rank sales by store in each product category.  To do this, we add a 
+      PARTITION BY to the OVER clause.
+
+
+    # Create table to hold sales data
+    CREATE TABLE store_sales (
+        store varchar(30),
+        category varchar(30) NOT NULL,
+        unit_sales bigint NOT NULL,
+        CONSTRAINT store_category_key PRIMARY KEY (store, category)
+    );
+    
+
+    # Insert sales data
+    INSERT INTO store_sales (store, category, unit_sales)
+    VALUES
+        ('Broders', 'Cereal', 1104),
+        ('Wallace', 'Ice Cream', 1863),
+        ('Broders', 'Ice Cream', 2517),
+        ('Cramers', 'Ice Cream', 2112),
+        ('Broders', 'Beer', 641),
+        ('Cramers', 'Cereal', 1003),
+        ('Cramers', 'Beer', 640),
+        ('Wallace', 'Cereal', 980),
+        ('Wallace', 'Beer', 988);
+    
+
+    # Get the ranking by category
+    SELECT
+        category,
+        store,
+        unit_sales,
+        rank() OVER (PARTITION BY category ORDER BY unit_sales DESC)
+    FROM store_sales;
+
+
+    category     store      unit_sales    rank
+    ---------    -------    ----------    ----
+    Beer         Wallace           988       1
+    Beer         Broders           641       2
+    Beer         Cramers           640       3
+    Cereal       Broders          1104       1
+    Cereal       Cramers          1003       2
+    Cereal       Wallace           980       3
+    Ice Cream    Broders          2517       1
+    Ice Cream    Cramers          2112       2
+    Ice Cream    Wallace          1863       3
+
+
+
+- Calculating Rates for Meaningful Comparisons
+
+    Just ranking by count is sometimes misleading.  For instance, NYC has more propery
+      crimes than Chicago, but has fewer per capita.  We'll look at property crimes
+      per capita here.
+
+
+    # Create table to store crime data
+    CREATE TABLE fbi_crime_data_2015 (
+        st varchar(20),
+        city varchar(50),
+        population integer,
+        violent_crime integer,
+        property_crime integer,
+        burglary integer,
+        larceny_theft integer,
+        motor_vehicle_theft integer,
+        CONSTRAINT st_city_key PRIMARY KEY (st, city)
+    );
+    
+
+    # Copy crime data into table
+    COPY fbi_crime_data_2015
+    FROM 'C:\YourDirectory\fbi_crime_data_2015.csv'
+    WITH (FORMAT CSV, HEADER, DELIMITER ',');
+
+
+    # Find property crime rates per thousand in cities with 500K+ people
+    SELECT
+        city,
+        st,
+        population,
+        property_crime,
+        round( (property_crime::numeric / population) * 1000, 1) AS pc_per_1000
+    FROM fbi_crime_data_2015
+    WHERE population >= 500000
+    ORDER BY (property_crime::numeric / population) DESC;
+
+
+    city            st          population       property_crime      pc_per_1000
+    --------        --------    -----------      --------------      -----------
+    Tuscon          Arizona         529675                35185             66.4
+    San Francisco   California      863782                53019             61.4
+    -- snip --

@@ -1,0 +1,248 @@
+---------------------------------------------------
+CHAPTER 15 - VIEWS, FUNCTIONS, and TRIGGERS
+---------------------------------------------------
+
+- Using Views to Simplify Queries
+
+    A 'view' is a virtual table we can create dynamically using a saved query.  Every time
+      we access the view, the saved query runs automatically and displays the results.
+      We can query a view, join it to regular tables or other views, and used it to
+      update or insert data to the table it's based on.
+
+    Views are used to:
+      - Avoid duplicate effort
+      - Reduce complexity
+      - Provide security by limiting access to certain columns in a table
+
+
+
+- Creating and Querying a View
+
+    # Create a view
+    CREATE OR REPLACE VIEW nevada_counties_pop_2010 AS
+        SELECT geo_name,
+             state_fips,
+             county_fips,
+             p0010001 AS pop_2010
+        FROM us_counties_2010
+        WHERE state_us_abbreviation = 'NV'
+        ORDER BY county_fips;
+
+
+    # Query the view
+    SELECT *
+    FROM nevada_counties_pop_2010
+    LIMIT 5;
+
+
+
+- Inserting, Updating, and Deleting Data with Views
+
+    # Create a view
+    CREATE OR REPLACE VIEW employees_tax_dept AS
+        SELECT emp_id,
+            first_name,
+            last_name,
+            dept_id
+        FROM employees
+        WHERE dept_id = 1
+        ORDER BY emp_id
+    WITH LOCAL CHECK OPTION;
+
+
+    The WITH LOCAL CHECK OPTION rejects any insert or update that does not meet the criteria of
+      the WHERE clause.  For example, the option won't allow a row to be updated or inserted
+      if the employee's 'dept_id' is 3.
+
+
+    # Will insert row successfully using the view
+    INSERT INTO employees_tax_dept (first_name, last_name, dept_id)
+    VALUES ('Suzanne', 'Legere', 1);
+
+
+    # Will fail since dept_id isn't 1
+    INSERT INTO employees_tax_dept (first_name, last_name, dept_id)
+    VALUES ('Jamil', 'White', 2);
+
+
+    # Update row using view
+    UPDATE employees_tax_dept
+    SET last_name = 'Le Gere'
+    WHERE emp_id = 5;
+
+
+    # Delete row using view
+    DELETE FROM employees_tax_dept
+    WHERE emp_id = 5;
+
+
+
+- Creating and Using a Stored Procedure
+
+    # Create a stored procedure
+    CREATE OR REPLACE FUNCTION
+        percent_change(new_value numeric,
+                       old_value numeric,
+                       decimal_places integer DEFAULT 1)
+    RETURNS numeric AS
+        'SELECT round(((new_value - old_value) / old_value) * 100, decimal_places);'
+    LANGUAGE SQL
+    IMMUTABLE
+    RETURNS NULL ON NULL INPUT;
+
+
+    The LANGUAGE SQL clause specifies that the function is written in SQL, one of several
+      languages supported by Postgres.
+
+    The IMMUATABLE keyword indicates that the function won't be making any changes to the 
+      database, which can improve performance.
+
+    The RETURNS NULL ON NULL INPUT clause guarantees that the function will supply a 
+      NULL response if any input not supplied by default is a NULL.
+
+
+    # Use the stored procedure
+    SELECT percent_change(110, 108, 2);
+
+    percent_change
+    --------------
+              1.85
+
+
+
+- Updating Data Using a Stored Procedure
+
+    # Create stored procedure for update
+    CREATE OR REPLACE FUNCTION update_personal_days()
+    RETURNS void AS $$
+    BEGIN
+        UPDATE teachers
+        SET personal_days =
+            CASE WHEN (now() - hire_date) BETWEEN '5 years'::interval AND '10 years'::interval THEN 4
+                 WHEN (now() - hire_date) > '10 years'::interval THEN 5
+                 ELSE 3
+            END;
+    RAISE NOTICE 'personal_days updated!';
+    END;
+    $$ LANGUAGE plpgsql;
+
+
+    This function is written in PL/pgsql.  The $$ ... $$ encloses the entire function definition 
+      as an ANSI SQL string and the LANGUAGE plpgsql clause specifies the langague it's written in.
+
+    The RETURNS void specifies that the function returns no data.
+
+    The RAISE NOTICE statement displays a message in the pgAdmin console that the function is done.
+
+
+    # Run the update function
+    SELECT update_personal_days();
+
+
+
+- Example - Using Python in a Function
+
+    # Add python support
+    CREATE EXTENSION plpythonu;
+
+
+    # Create stored procedure
+    CREATE OR REPLACE FUNCTION trim_county(input_string text)
+    RETURNS text AS $$
+        import re
+        cleaned = re.sub(r' County', '', input_string)
+        return cleaned
+    $$ LANGUAGE plpythonu;
+
+
+    # Use the stored procedure
+    SELECT geo_name,
+           trim_county(geo_name)
+    FROM us_counties_2010
+    ORDER BY state_fips, county_fips
+    LIMIT 5;
+
+    geo_name          trim_county
+    --------------    -----------
+    Autauga County    Autauga
+    Baldwin County    Baldwin
+    Barbour County    Barbour
+    Bibb County       Bibb
+    Blount County     Blount
+
+
+
+- Triggers
+
+    A database 'trigger' executes a function whenver a specified event, such as an INSERT,
+      UPDATE, or DELETE occurs on a table or view.  
+
+    In this example, we'll log whenever student grades are changed in our database.
+
+
+    # Create the grades table
+    CREATE TABLE grades (
+        student_id bigint,
+        course_id bigint,
+        course varchar(30) NOT NULL,
+        grade varchar(5) NOT NULL,
+        PRIMARY KEY (student_id, course_id)
+    );
+
+
+    # Insert data into grades table
+    INSERT INTO grades
+    VALUES
+        (1, 1, 'Biology 2', 'F'),
+        (1, 2, 'English 11B', 'D'),
+        (1, 3, 'World History 11B', 'C'),
+        (1, 4, 'Trig 2', 'B');
+
+
+    # Create table for logging changes to grades
+    CREATE TABLE grades_history (
+        student_id bigint NOT NULL,
+        course_id bigint NOT NULL,
+        change_time timestamp with time zone NOT NULL,
+        course varchar(30) NOT NULL,
+        old_grade varchar(5) NOT NULL,
+        new_grade varchar(5) NOT NULL,
+        PRIMARY KEY (student_id, course_id, change_time)
+    );
+
+
+
+- Creating the Function and Trigger
+
+    # Create the function to log grade changes
+    CREATE OR REPLACE FUNCTION record_if_grade_changed()
+    RETURNS trigger AS
+    $$
+    BEGIN
+        IF NEW.grade <> OLD.grade THEN
+        INSERT INTO grades_history (
+            student_id,
+            course_id,
+            change_time,
+            course,
+            old_grade,
+            new_grade)
+        VALUES
+            (OLD.student_id,
+             OLD.course_id,
+             now(),
+             OLD.course,
+             OLD.grade,
+             NEW.grade);
+        END IF;
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+
+    # Create the trigger
+    CREATE TRIGGER grades_update
+    AFTER UPDATE
+    ON grades
+    FOR EACH ROW
+    EXECUTE PROCEDURE record_if_grade_changed();

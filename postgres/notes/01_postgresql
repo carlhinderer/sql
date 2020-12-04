@@ -1,0 +1,156 @@
+----------------------------------------------------
+CHAPTER 1 - POSTGRESQL
+----------------------------------------------------
+
+- psql Commands
+
+    psql -U postgres            # Start postgres
+    \q                          # Exit postgres
+    \h                          # List help documentation
+
+    \l                          # List all databases
+    \c __database__             # Connect to a database
+    \d __table__                # Show table definition
+
+    \dy                         # List events
+    \df                         # List functions
+    \di                         # List indexes
+    \dn                         # List schemas
+    \dv                         # List views
+
+    \du                         # List users
+    \du __username__            # List username if present
+    create role __test1__       # Create role with existing user
+    set role __test__           # Change role for current session
+    grant __role__ to __test__  # Grant role to user
+
+
+
+- Configuration
+
+    # Service management commands
+    sudo service postgresql stop
+    sudo service postgresql start
+    sudo service postgresql restart
+
+    # Change postges configuration
+    sudo vim /etc/postgresql/9.3/main/postgresql.conf
+
+
+
+- Create Queries
+
+    CREATE DATABASE __database_name__
+    CREATE TABLE __table_name__
+
+
+
+- Handy Queries
+
+    # List procedure/function
+    SELECT * FROM pg_proc WHERE proname='__procedurename__';
+
+    # List view
+    SELECT * FROM pg_views WHERE viewname='__viewname__';
+
+    # Show DB table space in use
+    SELECT pg_size_pretty(pg_total_relation_size('__table_name__'));
+
+    # Show DB space in use
+    SELECT pg_size_pretty(pg_database_size('__database_name__'));
+
+    # Show current user's statement timeout
+    show statement_timeout;
+
+    # Show table indexes
+    SELECT * FROM pg_indexes WHERE tablename='__table_name__' AND schemaname='__schema_name__';
+
+
+
+- Execution Queries
+
+    # Show all queries being executed at a certain DB
+    SELECT datname, application_name, pid, backend_start, query_start, state_change, state, query 
+    FROM pg_stat_activity 
+    WHERE datname='__database_name__';
+
+    # Get all queries from all DBs waiting for data (might be hung)
+    SELECT * FROM pg_stat_activity WHERE waiting='t'
+
+    # Currently running queries with process pid
+    SELECT pg_stat_get_backend_pid(s.backendid) AS procpid, 
+      pg_stat_get_backend_activity(s.backendid) AS current_query
+    FROM (SELECT pg_stat_get_backend_idset() AS backendid) AS s;
+
+
+
+- Casting
+
+   # Either of these will work
+   CAST (column AS type)
+   column::type
+
+
+
+- Query Analysis
+
+    # See the query plan for a given query
+    EXPLAIN __query__
+
+    # See and execute the query plan for a given query
+    EXPLAIN ANALYZE __query__
+
+    # Collect statistics
+    ANALYZE [__table__]
+
+
+
+- Installing and Running pgadmin
+
+    # Create new Python environment, since it has so many dependencies
+    python -m venv postgresql
+    source postgresql/bin/activate
+
+    # Run pgadmin
+    cd postgresql/lib/python3.7/site-packages/pgadmin4
+    python pgAdmin4.py
+
+
+
+- Creating a Database
+
+    # Log into default postgres db
+    sudo -u postgres psql postgres
+
+    # Log into default user db
+    psql
+
+    # Create a new database
+    CREATE DATABASE analysis;
+
+
+
+- CREATE TABLE statement
+
+    CREATE TABLE teachers (
+      id bigserial,
+      first_name varchar(25),
+      last_name varchar(50),
+      school varchar(50),
+      hire_date date,
+      salary numeric
+    );
+
+    # bigserial is an auto-incrementing integer
+
+
+
+- INSERT statement
+
+    INSERT INTO teachers (first_name, last_name, school, hire_date, salary)
+    VALUES ('Janet', 'Smith', 'F.D. Roosevelt HS', '2011-10-30', 36200),
+           ('Lee', 'Reynolds', 'F.D. Roosevelt HS', '1993-05-22', 65000),
+           ('Samuel', 'Cole', 'Myers Middle School', '2005-08-01', 43500),
+           ('Samantha', 'Bush', 'Myers Middle School', '2011-10-30', 36200),
+           ('Betty', 'Diaz', 'Myers Middle School', '2005-08-30', 43500),
+           ('Kathleen', 'Roush', 'F.D. Roosevelt HS', '2010-10-22', 38500);

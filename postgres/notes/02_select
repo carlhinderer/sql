@@ -1,0 +1,120 @@
+---------------------------------------------------
+CHAPTER 2 - SELECT
+---------------------------------------------------
+
+- Basic Selection
+
+    # Select all columns
+    SELECT * FROM teachers;
+
+    # Select subset of columns
+    SELECT first_name, last_name FROM teachers;
+
+
+
+- Selecting Unique Values
+
+    # Select distinct values in a column
+    SELECT DISTINCT school
+    FROM teachers;
+
+    # Return unique pairs of values
+    SELECT school, salary
+    FROM teachers;
+
+
+
+- Selecting With Ordering
+
+    # Sorting results
+    SELECT first_name, last_name, salary
+    FROM teachers
+    ORDER BY salary DESC;
+
+
+    # Sort on mulitple columns
+    SELECT last_name, school, hire_date
+    FROM teachers
+    ORDER BY school ASC, hire_date DESC;
+
+    last_name    school                 hire_date
+    ---------    -------------------    ----------
+    Smith        F.D. Roosevelt HS      2011-10-30
+    Roush        F.D. Roosevelt HS      2010-10-22
+    Reynolds     F.D. Roosevelt HS      1993-05-22
+    Bush         Myers Middle School    2011-10-30
+    Diaz         Myers Middle School    2005-08-30
+    Cole         Myers Middle School    2005-08-01
+
+
+
+- Filtering Rows
+
+    # Filter rows
+    SELECT last_name, school, hire_date
+    FROM teachers
+    WHERE school = 'Myers Middle School';
+
+
+    # Postgres Comparison and Matching Operators
+    =                # Equal To
+    <> or !=         # Not Equal To
+    > >= < <=        # Greater and Less Than
+
+    BETWEEN          # Within a range (WHERE salary BETWEEN 20000 AND 40000)
+    IN               # Match in a set (WHERE last_name IN ('Smith', 'Jones'))
+    LIKE             # Match a pattern case-sensitive (WHERE first_name LIKE 'Sam%')
+    ILIKE            # Match a patter case-insensitive (WHERE first_name ILIKE 'sam%')
+    NOT              # Negates a condition (WHERE first_name NOT ILIKE 'sam%')
+
+
+    # LIKE and ILIKE Wildcards
+    %                # Matches one or more characters (LIKE '%ak%')
+    _                # Matches one character (LIKE '_aker')
+
+
+    # Combining Operators
+    AND              # AND 2 conditions (WHERE school = 'Myers' AND salary < 40000)
+    OR               # OR 2 conditions (WHERE last_name = 'Cole' OR last_name = 'Bush')
+
+
+
+- Combined Queries
+
+    # Combined query form
+    SELECT column_names
+    FROM table_name
+    WHERE criteria
+    ORDER BY column_names;
+
+
+    # Example Combined Query
+    SELECT first_name, last_name, school, hire_date, salary
+    FROM teachers
+    WHERE school LIKE '%Roos%'
+    ORDER BY hire_date DESC;
+
+
+
+- Exercises
+
+    # The school district superintendent asks for a list of teachers in each school. Write a 
+    #   query that lists the schools in alphabetical order along with teachers ordered by 
+    #   last name A–Z.
+    SELECT school, first_name, last_name
+    FROM teachers
+    ORDER BY school ASC, last_name ASC;
+    
+
+    # Write a query that finds the one teacher whose first name starts with the letter S and 
+    #   who earns more than $40,000.
+    SELECT first_name, last_name
+    FROM teachers
+    WHERE first_name LIKE 'S%' AND salary > 40000;
+
+
+    # Rank teachers hired since January 1, 2010, ordered by highest paid to lowest.
+    SELECT first_name, last_name, salary
+    FROM teachers
+    WHERE hire_date >= '2010-01-01'
+    ORDER BY salary DESC;
