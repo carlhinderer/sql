@@ -1,0 +1,201 @@
+----------------------------------------------------
+CHAPTER 15 - NORMALIZATION
+----------------------------------------------------
+
+- Goals of Relational Design
+
+    - Relational design ultimately produces a set of relations.  The implicit goals of the design are
+        information preservation and minimum redundancy.
+
+
+    - Here, we discuss 4 informal guidelines that may be used as measures to determine the quality of
+        database design:
+
+        1. Make sure the semantics of the attributes is clear in the schema
+        2. Reduce the redundant information in tuples
+        3. Reduce NULL values in tuples
+        4. Disallow the possibility of generating spurious tuples
+
+
+
+- Guideline #1
+
+    - Design a relation schema so that it is easy to explain its meaning.  
+
+    - Do not combine attributes from multiple entity types and relationship types into a single relation.
+        Intuitively, if a relation schema corresponds to one entity type or one relationship type, it is
+        straightforward to interpret and explain its meaning.
+
+    - If a relation corresponds to a mixture of multiple entities and relationships, semantic ambiguities
+        will result and the relation cannot be easily explained.
+
+
+
+- Guideline #2
+
+    - Design the base relation schema so that no insertion, deletion, or modification anomalies are 
+        present in the relation.  If any anomalies are present, note them clearly and make sure the 
+        programs update the database will operate correctly.
+
+    - Normalization will automatically solve these problems.  However, it may be necessary to denormalize
+        to improve the performance of certain queries.
+
+
+
+- Guideline #3
+
+    - As far as possible, avoid placing attributes in a base relation whose values may frequently be
+        NULL.  If NULLs are unavoidable, make sure they apply in exceptional cases only and do not apply
+        to a majority of tuples in the relation.
+
+    - Note that NULLs may have multiple different interpretations:
+        1. The attribute does not apply to the tuple (ie visa_status doesn't apply to US students)
+        2. The value for this tuple is unknown (the dob is unknown for an employee)
+        3. The value is known but absent (home_phone_number is known, but hasn't been recorded yet)
+
+    - Using space efficiently and avoiding joins with NULL values are the 2 overriding criteria that
+        determine whether or to use columns that have NULLs in a relation or to have a separate relation
+        for those columns.
+
+
+
+- Guideline #4
+
+    - Design relation schemas to that they can be joined with equality conditions on attributes that are
+        appropriately related (primary key, foreign key) pairs in a way that guarantees that no spurious
+        tuples are generated.
+
+    - Avoid relations that contain matching attributes that are not (primary key, foreign key) 
+        combinations because joining on such attributes may produce spurious tuples.  
+
+
+
+- Functional Dependencies
+
+    - A functional dependency, denoted X -> Y, 
+
+
+- 1NF
+
+    - The domain of an attribute must include only atomic values, and the value of any attribute must
+        a single value from the domain.  Multivalued attributes are not allowed.
+
+
+    - The solution is to form new relations with each multivalued attribute or nested relation.
+
+
+    - Example
+
+        Before Normalization:
+
+        DEPARTMENT
+        ----------------------------------------------------------------------------
+        DName             DNumber(PK)    Dmgr_ssn        Dlocations
+        ----------------------------------------------------------------------------
+        Research          5              333445555       {Bellaire, Sugarland, Houston}
+        Administration    4              987654321       {Stafford}
+        Headquarters      1              888665555       {Houston}
+
+
+        After Normalization:
+
+        DEPARTMENT
+        ----------------------------------------------------------------------------
+        DName             DNumber(PK)    Dmgr_ssn        Dlocation(PK)
+        ----------------------------------------------------------------------------
+        Research          5              333445555       Bellaire
+        Research          5              333445555       Sugarland
+        Research          5              333445555       Houston
+        Administration    4              987654321       Stafford
+        Headquarters      1              888665555       Houston
+
+
+
+- 2NF
+
+    - A relation schema R is in 2NF if every nonprime attribute A in R is fully functionally dependent
+        on the primary key of R.
+
+
+    - For relations where primary key contains multiple attributes, no nonkey attribute should be
+        functionally dependent on a part of the primary key.  
+
+
+    - The solution is to decompose and set up a new relation for each partial key with its dependent
+        attributes.  Make sure to keep a relation with the original primary key and any attributes that
+        are fully functionally dependent on it.
+
+
+    - Example:
+
+        Before Normalization:
+
+        EMP_PROJ
+        ----------------------------------------------------------------------------
+        Ssn(PK)     Pnumber(PK)     Ename     Pname     Plocation
+        ----------------------------------------------------------------------------
+
+          Here, 'Ename' is dependent on 'Ssn', but not on 'Pnumber'
+          Also, 'Pname' and 'Plocation' are dependent on 'Pnumber', but not on 'Ssn'
+
+
+        After Normalization:
+
+        EP1
+        ----------------------------------------
+        Ssn(PK)     Pnumber(PK)     Hours
+        ----------------------------------------
+
+        EP2                                EP3
+        -----------------------            -----------------------------------------
+        Ssn(PK)     Ename                  Pnumber(PK)     Pname     Plocation
+        -----------------------            -----------------------------------------
+
+
+
+- 3NF
+
+    - A relation schema R is in 3NF if no nonprime attribute of R is transitively dependent on the primary
+        key.  
+
+
+    - Relations should not have a nonkey attribute functionally determined by another nonkey attribute (or
+        a set of nonkey attributes).  There should be no transitive dependency of a nonkey attribute on
+        the primary key.
+
+
+    - Decompose and set up a relation that includes the nonkey attribute(s) that functionally determine
+        other nonkey attribute(s).
+
+
+    - Example:
+
+        Before Normalization:
+
+        EMP_DEPT
+        ---------------------------------------------------------------------------------
+        Ename     Ssn(PK)     Bdate     Address     Dnumber     Dname     Dmgr_ssn
+        ---------------------------------------------------------------------------------
+
+          Here, 'Dname' and 'Dmgr_ssn' are dependent only on 'Dnumber'.  They have no relation to
+            the primary key.
+
+
+        After Normalization:
+
+        EMPLOYEES
+        --------------------------------------------------------
+        Ename     Ssn(PK)     Bdate     Address     Dnumber
+        --------------------------------------------------------
+
+        DEPARTMENT
+        ----------------------------------------
+        Dnumber(PK)     Dname     Dmgr_ssn
+        ----------------------------------------
+
+
+
+- BNCF
+
+    - A relation schema R is in BCNF if whenever a nontrivial functional dependency X->A holds in R,
+        then X is a superkey of R.

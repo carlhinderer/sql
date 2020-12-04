@@ -1,0 +1,318 @@
+----------------------------------------------------
+CHAPTER 5 - MORE SQL
+----------------------------------------------------
+
+- Checking for NULL in Queries
+
+    # Get the list of employees that don't have supervisors
+    SELECT Fname, Lname
+    FROM EMPLOYEE
+    WHERE Super_ssn IS NULL;
+
+
+
+- Nested Queries with the IN Function
+
+    # The IN operator compares a value with a set and evaluates to TRUE if the value is in the set
+    SELECT DISTINCT Pnumber
+    FROM PROJECT
+    WHERE Pnumber IN (
+        SELECT Pnumber
+        FROM PROJECT, DEPARTMENT, EMPLOYEE
+        WHERE Dnum = Dnumber AND Mgr_ssn = Ssn AND Lname = 'Smith');
+
+
+    # IN operator with a tuple
+    SELECT DISTINCT Essn
+    FROM WORKS_ON
+    WHERE (Pno, Hours) IN (SELECT Pno, Hours
+                           FROM WORKS_ON
+                           WHERE Essn = '222334444');
+
+
+
+- The ALL Function
+
+    # Return employees whose salary is greater than all employees in Dept 5
+    SELECT Lname, Fname
+    FROM EMPLOYEE
+    WHERE Salary > ALL (SELECT Salary
+                        FROM EMPLOYEE
+                        WHERE Dno = 5);
+
+
+
+- The EXISTS Function
+
+    The EXISTS function is used to check whether the results of a nested query are empty.
+
+
+    # Get all employees who have dependents with the same name and sex as the employee
+    SELECT E.Fname, E.Lname
+    FROM EMPLOYEE AS E, DEPENDENT AS D
+    WHERE E.Ssn = D.Essn AND E.Sex = D.Sex AND E.Fname = D.Dependent_name;
+
+
+    # The same query using IN
+    SELECT E.Fname, E.Lname
+    FROM EMPLOYEE AS E
+    WHERE E.Ssn IN (SELECT Essn
+                    FROM DEPENDENT AS D
+                    WHERE E.Fname = D.Dependent_name AND E.Sex = D.Sex);
+
+
+    # The same query using EXISTS
+    SELECT E.Fname, E.Lname
+    FROM EMPLOYEE AS E
+    WHERE EXISTS (SELECT *
+                  FROM DEPENDENT
+                  WHERE Ssn = Essn);
+
+
+
+- Using NOT EXISTS
+
+    # Get names of employees who have no dependents
+    SELECT Fname, Lname
+    FROM EMPLOYEE
+    WHERE NOT EXISTS (SELECT *
+                      FROM DEPENDENT
+                      WHERE Ssn = Essn);
+
+
+
+- More EXISTS and NOT EXISTS Examples
+
+    # List the names of managers who have at least one dependent
+    SELECT Fname, Lname
+    FROM EMPLOYEE
+    WHERE EXISTS (SELECT *
+                  FROM DEPENDENT
+                  WHERE Ssn = Essn)
+          AND
+          EXISTS (SELECT *
+                  FROM DEPARTMENT
+                  WHERE Ssn = Mgr_ssn);
+
+
+    # Get the name of each employee who works on all projects controlled by Dept 5
+    #   Note: EXCEPT will cause query to return of results of 1st subquery MINUS results of 2nd subquery
+
+    SELECT Fname, Lname
+    FROM EMPLOYEE
+    WHERE NOT EXISTS (( SELECT Pnumber
+                        FROM PROJECT
+                        WHERE Dnum = 5)
+                        EXCEPT (
+                            SELECT Pno
+                            FROM WORKS_ON
+                            WHERE Ssn = Essn) );
+
+
+
+- Renaming Attributes
+
+    SELECT E.Lname AS Employee_name, S.Lname AS Supervisor_name
+    FROM EMPLOYEE AS E, EMPLOYEE AS S
+    WHERE E.Super_ssn = S.Ssn;
+
+
+
+- Joins
+
+    - Joins were incorporated into SQL to allow users to specify a table resulting from a join operation
+        in the FROM clause, rather than the WHERE clause.  The default join type is an INNER JOIN, where
+        a tuple is included in the result only if a matching tuple exists in the other relation.
+
+        # Get all employees in the Research department
+        SELECT Fname, Lname, Address
+        FROM EMPLOYEE 
+             JOIN DEPARTMENT ON Dno = Dnumber
+        WHERE Dname = 'Research';
+
+
+    - With a NATURAL JOIN, no join condition is specified.  An implicit EQUIJOIN condition for each
+        pair of attributes with the same name in the 2 relations is created.
+
+        SELECT Fname, Lname, Address
+        FROM EMPLOYEE
+             NATURAL JOIN DEPARTMENT AS DEPT (Dname, Dno, Mssn, Msdate)
+        WHERE Dname = 'Research';
+
+
+    - With a LEFT OUTER JOIN, all tuples from the left relation are included, whether they have a 
+        matching tuple in the right relation or not.  If they do not, NULL is returned for the attributes
+        from the right relation.
+
+        # Return all employees, whether they have a supervisor or not
+        SELECT E.Lname AS Employee_name,
+               S.Lname AS Supervisor_name
+        FROM EMPLOYEE AS E 
+             LEFT OUTER JOIN EMPLOYEE AS S ON E.Super_ssn = S.Ssn;
+
+
+    - With a RIGHT OUTER JOIN, all tuples from the right relation are included, whether they have a 
+        matching tuple in the left relation or not.  If it does not, NULL is returned for the attributes
+        from the left relation.
+
+
+    - With a FULL OUTER JOIN, all tuples from both relations are included.  They have NULL for the 
+        attributes they don't have a matching tuple for on either the left or right side.
+
+
+    - A CROSS JOIN returns the full Cartesian product of the 2 relations.  All possible combinations
+        of tuples from the relations are returned.
+
+
+    - Joins can also be multiway, with 3 or more relations included.
+
+        SELECT Pnumber, Dnum, Lname, Address, Bdate
+        FROM PROJECT
+             JOIN DEPARTMENT ON Dnum = Dnumber
+             JOIN EMPLOYEE ON Mgr_ssn = Ssn
+        WHERE Plocation = 'Stafford';
+
+
+
+- Aggregate Functions
+
+    # Get statistics for employee salaries
+    SELECT SUM(Salary), MAX(Salary), MIN(Salary), AVG(Salary)
+    FROM EMPLOYEE;
+
+
+    # Get the total number of employees in the company
+    SELECT COUNT(*)
+    FROM EMPLOYEE;
+
+
+    # Count the number of distinct employee salaries
+    SELECT COUNT(DISTINCT Salary)
+    FROM EMPLOYEE;
+
+
+
+- The GROUP BY and HAVING Clauses
+
+    - The GROUP BY clause allows us to partition our results into non-overlapping groups of tuples.
+
+        # For each dept, get the dept number, number of employees, and their average salary
+        SELECT Dno, COUNT(*), AVG(Salary)
+        FROM EMPLOYEE
+        GROUP BY Dno;
+
+
+    - If NULLS exist in the grouping attribute, a separate group is created for all tuples with a NULL
+        value in the grouping attribute.
+
+
+    - Joins can be combined with grouping operations.
+
+        # For each project, get the project number, name, and number of employees who work on it
+        SELECT Pnumber, Pname, COUNT(*)
+        FROM PROJECT, WORKS_ON
+        WHERE Pnumber = Pno
+        GROUP BY Pnumber, Pname;
+
+
+    - The HAVING clause is used to filter groups.
+
+        # For each project with > 2 employees, get the project number, name, and number of employees
+        SELECT Pnumber, Pname, COUNT(*)
+        FROM PROJECT, WORKS_ON
+        WHERE Pnumber = Pno
+        GROUP BY Pnumber, Pname
+        HAVING COUNT(*) > 2;
+
+
+
+- Specifying Constraints as Assertions
+
+    The CREATE ASSERTION statement can be used to specify additional types of constraints that are
+      outside the scope of the built-in relational model constraints.  They can be specified within
+      CREATE TABLE statements.
+
+      # Create constraint that ensures the salary of an employee cannot be greater than the 
+      #   salary of the manager of the department the employee works for
+
+      CREATE ASSERTION SALARY_CONSTRAINT
+      CHECK ( NOT EXISTS (SELECT *
+                          FROM EMPLOYEE E, EMPLOYEE M, DEPARTMENT D
+                          WHERE E.Salary > M.Salary AND E.Dno = D.Dnumber AND D.Mgr_ssn = M.Ssn) );
+
+
+
+- Specifying Constraints as Triggers
+
+    The CREATE TRIGGER statement specifies a procedure that will be called whenever a given table is
+      inserted into or updated.
+
+      # Create the same salary constraint with a trigger
+      CREATE TRIGGER SALARY_VIOLATION
+      BEFORE INSERT OR UPDATE OF Salary, Supervisor_ssn ON EMPLOYEE
+      FOR EACH ROW
+        WHEN (NEW.SALARY > (SELECT SALARY FROM EMPLOYEE
+                            WHERE SSN = NEW.SUPERVISOR_SSN))
+        INFORM_SUPERVISOR(NEW.Supervisor_ssn, NEW.Ssn);
+
+
+
+- Creating Views
+
+    A view is a virtual table that is derived from other tables.  
+
+      # Create a view
+      CREATE VIEW DEPT_INFO (Dept_name, No_of_emps, Total_sal)
+      AS SELECT Dname, COUNT(*), SUM(Salary)
+         FROM DEPARTMENT, EMPLOYEE
+         WHERE Dnumber = Dno
+         GROUP BY Dname;
+
+
+      # Remove a view
+      DROP VIEW DEPT_INFO;
+
+
+
+- View Implementation
+
+    There are 2 main approaches to implementing views:
+
+      1. Query Modification = Transform the view query into a query on the underlying tables and
+                                execute it.  This is simple, but can be an expensive approach since
+                                the view is not persisted.
+
+      2. View Materialization = Create a temporary view table to store the results.  In this case, we
+                                  need a strategy to update the view when the underlying tables are
+                                  updated.
+
+
+
+- The DROP Command
+
+    # Drop an entire schema and all its elements
+    DROP SCHEMA COMPANY CASCADE;
+
+    # Drop an entire table and all the elements that reference it
+    DROP TABLE DEPENDENT CASCADE;
+
+
+
+- The ALTER Command
+
+    # Add a column to a table
+    ALTER TABLE COMPANY.EMPLOYEE ADD COLUMN Job VARCHAR(12);
+
+    # Drop a column from a table and the elements that reference it
+    ALTER TABLE COMPANY.EMPLOYEE DROP COLUMN Job CASCADE;
+
+
+    # Set a default for a column
+    ALTER TABLE COMPANY.DEPARTMENT ALTER COLUMN Mgr_ssn SET DEFAULT '222334444';
+
+    # Drop a default for a column
+    ALTER TABLE COMPANY.DEPARTMENT ALTER COLUMN Mgr_ssn DROP DEFAULT;
+
+
+    # Drop a foreign key constraint
+    ALTER TABLE COMPANY.EMPLOYEE DROP CONSTRAINT EMPSUPERFK CASCADE;

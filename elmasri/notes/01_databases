@@ -1,0 +1,112 @@
+----------------------------------------------------
+CHAPTER 1 - DATABASES
+----------------------------------------------------
+
+- Reasons for using RDBMS
+
+    1. Controlling redundancy
+    2. Restricting access
+    3. Persistent storage
+    4. Efficient querying
+    5. Backup and recovery
+    6. Multiple user interfaces
+    7. Complex relationships among data
+    8. Enforcing integrity constraints
+    9. Enforcing rules
+
+
+
+- First Database Example
+
+    STUDENT [Name, Student_number, Class, Major]
+
+    COURSE [Course_name, Course_number, Credit_hours, Department]
+
+    SECTION [Section_id, Course_number, Semester, Year, Instructor]
+
+    GRADE_REPORT [Student_number, Section_identifier, Grade]
+
+    PREREQUISITE [Course_number, Prerequisite_number]
+
+
+
+- The main characteristics of a database approach (vs the older file system approach):
+
+    1. Self-describing nature of database system
+
+         The complete definition of of the database structure and constraints is stored in the database 
+           catalog.  This is called the 'metadata'.  
+
+
+    2. Data abstraction
+
+         The functionality of the database and the functionality of applications are completely
+           separate.  Changing one should not require changing the other one.  This is known as
+           'program-data independence'.
+
+
+    3. Support of multiple views of the data
+
+         A view of the data can be a subset of the database, or it may contain virtual data that is
+           derived from the database files but is not explicitly stored.  
+
+
+    4. Multiuser transaction processing
+
+         A DBMS must include concurrency control to ensure that when several users try to update the
+           database at the same time, it is done in a controlled manner.  
+
+        The concept of transactions is central to many database applications.  A 'transaction' is a 
+          process that includes one or more database accesses.  The RDBMS must ensure certain 
+          properties of transactions.  
+
+        The 'atomicity' property ensures that all database operations in a transaction are executed or 
+          none are.  
+
+        The 'consistency' property ensures that the database must be in a consistent state after any 
+          transaction, meaning no transaction should have an adverse affect on the data residing in the 
+          database.
+
+        The 'isolation' property ensures that each transaction appears to execute in isolation from 
+          other transactions.
+
+        The 'durability' property ensures that the database should be durable enough to hold all its 
+          latest updates, even if the system fails or restarts.  If a transaction updates a chunk of
+          data and commits, the database will hold the modified data.  If the system fails before the
+          transaction can be written to disk, the data will be updated once the system is back up.
+
+         
+
+- Denormalization Example
+
+    Sometimes, we may need to introduce controlled redundancy to improve the performance of queries.
+      For instance, say we decide to store the student's name in the GRADE_REPORT records, so that
+      we retrieve the student name when we retrieve the grade report without having to do a join.
+
+    This is known as 'denormalization'.  The DBMS should include capabilities for controlling this,
+      such as automatically updating GRADE_REPORT whenever STUDENT is updated.
+
+
+
+- History of Database Applications
+
+    1. Mid 60s to Mid 80s - Mainframe Systems
+
+         Conceptual relationships were intermixed with the physical storage of data on disk.  
+           Program-data independence did not exist.  Most of these systems were implemented on 
+           large, expensive mainframe computers.
+
+         These early systems were mostly based on 3 paradigms:
+           1. Hierarchical systems
+           2. Network model systems
+           3. Inverted file systems
+
+
+    2. Mid 80s to Today - Relational Databases
+
+         Relational databases were created (in the late 70s) to separate the physical storage of data
+           from its conceptual representation.  It also introduced high-level query languages as an
+           alternative to programming language interfaces.  
+
+         Originally, they were quite slow.  New storage and indexing techniques, along with 
+           optimization of query processing, has made them many times faster.

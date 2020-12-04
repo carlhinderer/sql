@@ -1,0 +1,123 @@
+----------------------------------------------------
+CHAPTER 3 - THE RELATIONAL MODEL
+----------------------------------------------------
+
+- Relational Model Terminology
+
+    - In formal terminology, a row is called a 'tuple', a column header is called an 
+        'attribute', and a table is called a 'relation'.  The data type describing the
+        type of values in each column is called the 'domain' of possible values.
+
+
+    - A relational schema R is made up of a name R and a list of attributes A1, A2, ... , An
+
+
+    - The domain D of possible values in Ai is denoted dom(Ai)
+
+
+    - The degree of a relation is the number of attributes in its schema
+
+        # Here is a relation of degree 7
+        STUDENT(Name, Ssn, Home_phone, Address, Office_phone, Age, Gpa)
+
+
+    - A relation r of a relational schema R is a set of n-tuples.  It is a subset of the
+        Cartesian product of the domains that define R.
+
+        r(R) c [dom(A1) x dom(A2) x ... x dom(An)]
+             -
+
+
+
+- Example Company Schema
+
+    EMPLOYEE [Fname, Minit, Lname, Ssn, Bdate, Address, Sex, Salary, Super_ssn, Dno]
+                                   ---
+
+    DEPARTMENT [Dname, Dnumber, Mgr_ssn, Mgr_start_date]
+                       -------
+
+    DEPT_LOCATIONS [Dnumber, Dlocation]
+                    -------  ---------
+
+    PROJECT [Pname, Pnumber, Plocation, Dnum]
+                    -------
+
+    WORKS_ON [Essn, Pno, Hours]
+              ----  ---
+
+    DEPENDENT [Essn, Dependent_name, Sex, Bdate, Relationship]
+               ----  --------------
+
+
+
+- Key Integrity
+
+    - The 'Entity Integrity Constraint' states that no primary key can be NULL.  If we allowed NULL values
+        for primary keys, some tuples would not be able to be identified.
+
+
+    - The 'Referential Integrity Constraint' states that a tuple in one relation that refers to another
+        relation must refer to an existing tuple in that relation.
+
+
+    - Insert operations can violate constraints if:
+
+        1. An attribute value is given outside of the attribute's domain
+
+        2. A key value already exists in the relation or is NULL
+
+        3. A foreign key refers to a tuple that does not exist in the referenced relation
+
+      If an insertion violates one or more constraints, the default option is to reject the insertion.
+
+
+    - Delete operations can only violate referential integrity.  This occurs if the tuple being deleted
+        is referenced by foreign keys from other tuples in the database.  Several options are available
+        if the deletion causes a violation:
+
+        1. The 'restrict' option is to reject the deletion
+
+        2. The 'cascade' option is to attempt to cascade the deletion by deleting tuples that reference
+             the tuple that is being deleted.
+
+        3. The 'set null' or 'set default' option will modify the referencing attributes that cause the
+             violation.  Note that if a referencing attribute is part of the primary key, it cannot
+             be set to NULL.
+
+
+    - An Update operation won't cause any problems if key attributes aren't being modified.  If a key
+        value is changed, it is analogous to a delete, then an insert of a tuple, since we use primary
+        keys to identify the tuples.
+
+
+
+- Example Airport Schema
+
+    AIRPORT [Airport_code, Name, City, State]
+             ------------
+
+    FLIGHT [Flight_number, Airline, Weekdays]
+            -------------
+
+    FLIGHT_LEG [Flight_number, Leg_number, Departure_airport_code, Scheduled_departure_time,
+                -------------  ----------       Arrival_airport_code, Scheduled_arrival_time]
+
+    LEG_INSTANCE [Flight_number, Leg_number, Date, Number_of_available_seats, Airplane_id,
+                  -------------  ----------  ----       Departure_airport_code, Departure_time,
+                                                        Arrival_airport_code, Arrival_time]
+
+    FARE [Flight_number, Fare_code, Amount, Restrictions]
+          -------------  ---------
+
+    AIRPLANE_TYPE [Airplane_type_name, Max_seats, Company]
+                   ------------------
+
+    CAN_LAND [Airplane_type_name, Airport_code]
+              ------------------  ------------
+
+    AIRPLANE [Airplane_id, Total_number_of_seats, Airplane_type]
+              -----------
+
+    SEAT_RESERVATION [Flight_Number, Leg_number, Date, Seat_number, Customer_name, Customer_phone]
+                      -------------  ----------  ----  -----------

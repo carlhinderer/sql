@@ -1,0 +1,161 @@
+----------------------------------------------------
+CHAPTER 6 - RELATIONAL ALGEBRA AND CALCULUS
+----------------------------------------------------
+
+- Formal Languages
+
+    - There are 2 formal languages for the relational model: relational algebra and relational calculus.
+        SQL is the practical language for the relational model.  It is based on these earlier formal
+        languages.
+
+
+    - Relational Algebra provides a basic set of operations for retrieving requests from a relational
+        model.  It is used to implement, process, and optimize queries in a RDBMS.  It describes the
+        sequence of operations used to retrieve a result.
+
+
+    - Relational Calculus provides a higher-level declarative language for specifying relational queries.
+        There is no order of operations, just what the result should contain.
+
+
+
+- The SELECT Operation
+
+    We can think of selection as a filtering operation that only keeps the tuples that specify a given
+      condition.
+
+
+      SELECT[Dno=4] (EMPLOYEE)
+
+      SELECT[Salary > 30000] (EMPLOYEE)
+
+
+
+- The PROJECT Operation
+
+    Whereas selection filters tuples, projection filters attributes.  The PROJECT operation also removes
+      any duplicate tuples, producing a valid set.
+
+
+      PROJECT[Lname, Fname, Salary] (EMPLOYEE)
+
+
+
+- Combining SELECT and PROJECT
+
+    For most queries, we need to apply several relational operations, one after another.
+
+
+      PROJECT[Fname, Lname, Salary] (SELECT[Dno = 5] (EMPLOYEE))
+
+
+
+- The RENAME Operation
+
+    We can also rename any relation for convenience.
+
+      TEMP <- SELECT[Dno = 5] (EMPLOYEE)
+
+      PROJECT[Fname, Lname, Salary] (TEMP)
+
+
+
+- Set Theory Relational Algebra Operations
+
+    UNION (U)
+    INTERSECTION (^)
+    SET DIFFERENCE aka MINUS (-)
+    CARTESIAN PRODUCT (X)
+
+
+      FEMALE_EMPS <- SELECT[Sex = 'F'] (EMPLOYEE)
+      EMPNAMES <- PROJECT[Fname, Lname, Ssn] (FEMALE_EMPS)
+      EMP_DEPENDENTS <- EMPNAMES X DEPENDENTS
+      ACTUAL_DEPENDENTS <- SELECT[Ssn = Essn] (EMP_DEPENDENTS)
+      RESULTS <- PROJECT[Fname, Lname, Dependent_name] (ACTUAL_DEPENDENTS)
+
+
+
+- The JOIN Operation
+
+    - The JOIN operation is used to combine related tuples from 2 relations into single longer tuples.
+
+        DEPT_MGR <- (DEPARTMENT) JOIN[Mgr_ssn = Ssn] (EMPLOYEE)
+        RESULT <- PROJECT[Dname, Lname, Fname] (DEPT_MGR)
+
+
+    - A Join in which = is the only comparison operator used is called an EQUIJOIN.  If the attributes
+        used to join relations are the same on both sides, we can use a NATURAL JOIN.
+
+        PROJ_DEPT <- (PROJECT) NATURAL JOIN[Dname, Dnum, Mgr_ssn] (DEPARTMENT)
+
+
+
+ - The DIVISION Operation
+
+     - The DIVISION operator (/) is used to find a relation in which the values of one tuple must appear
+         in every tuple in the other relation.
+
+
+     - Suppose we want to retrieve the name of all employees who work on ALL of the projects that
+         'John Smith' works on.
+
+         # First, we get the list of project numbers that John Smith works on
+         SMITH <- SELECT[Fname = 'John' AND Lname = 'Smith'] (EMPLOYEE)
+         SMITH_PNOS <- PROJECT[Pno] ((WORKS_ON) JOIN[Essn = Ssn] (SMITH))
+
+         # Then, we get the employees who work on the projects in SMITH_PNOS
+         SSN_PNOS <- PROJECT[Essn, Pno] (WORKS_ON)
+
+         # Finally, we apply the division operator to get the employees who work on all of the projects
+         SSNS(SSn) <- SSN_PNOS / SMITH_PNOS
+         RESULT <- PROJECT[Fname, Lname] ((SSNS) NATURAL JOIN (EMPLOYEE)
+
+
+
+- Query Example #1
+
+    # Retrieve the name and address of all employees who work for the 'Research' department
+
+    RESEARCH_DEPT <- SELECT[Dname = 'Research'] (DEPARTMENT)
+    RESEARCH_EMPS <- (RESEARCH_DEPT) JOIN[Dnumber = Dno] (EMPLOYEE)
+    RESULT <- PROJECT[Fname, Lname, Address] (RESEARCH_EMPS)
+
+
+
+- Query Example # 2
+
+    # For every project located in 'Stafford', list the project number, the controlling department
+    #   number, the department manager's last name, address, and birth date.
+
+    STAFFORD_PROJS <- SELECT[Plocation = 'Stafford'] (PROJECT)
+    CONTR_DEPTS <- (STAFFORD_PROJS) JOIN[Dnum = Dnumber] (DEPARTMENT)
+    PROJ_DEPT_MGRS <- (CONTR_DEPTS) JOIN[Mgr_ssn = Ssn] (EMPLOYEE)
+    RESULT <- PROJECT[Pnumber, Dnum, Lname, Address, Bdate] (PROJ_DEPT_MGRS)
+
+
+
+- Query Example # 3
+
+    # Find the names of employees who work on all projects controlled by Dept 5
+
+    DEPT_5_PROJ_NUMS <- SELECT[Dnum = 5] (PROJECT)
+    DEPT_5_PROJS <- RENAME[Pno] ( PROJECT[Pnumber] (DEPT_5_PROJ_NUMS) )
+    EMP_PROJS <- RENAME[Ssn, Pno] ( PROJECT[Essn, Pno] (WORKS_ON) )
+    RESULT_EMP_SSNS <- EMP_PROJ / DEPT5_PROJS
+    RESULT <- PROJECT[Lname, Fname] ((RESULT_EMP_SSNS) NATURAL JOIN (EMPLOYEE) )
+
+
+
+- Tuple Relational Calculus
+
+    - A relational calculus expression specifies what is to be retrieved, rather than how to retrieve
+        it.  Any expression that can be expressed in relational algebra can also be expressed in 
+        relational calculus, and vice versa.
+
+
+    - Tuple variables specify a range relation with the conditions that apply to them.
+
+        {t | EMPLOYEE(t) AND t.Salary > 50000}
+
+        {t.Fname, t.Lname | EMPLOYEE(t) AND t.Salary > 50000}

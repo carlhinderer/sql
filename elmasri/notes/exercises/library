@@ -1,0 +1,102 @@
+----------------------------------------------------
+LIBRARY EXAMPLE
+----------------------------------------------------
+
+- Library Schema
+
+    BOOK [Book_id, Title, Publisher_name]
+          -------
+
+    BOOK_AUTHORS [Book_id, Author_name]
+                  -------
+
+    PUBLISHER [Name, Address, Phone]
+               ----
+
+    BOOK_COPIES [Book_id, Branch_id, No_of_copies]
+                 -------  ---------
+
+    BOOK_LOANS [Book_id, Branch_id, Card_no, Date_out, Due_date]
+                -------  ---------  -------
+
+    LIBRARY_BRANCH [Branch_id, Branch_name, Address]
+                    ---------
+
+    BORROWER [Card_no, Name, Address, Phone]
+              -------
+
+
+
+- DDL To Create Schema
+
+    CREATE TABLE PUBLISHER
+      ( Name                VARCHAR(50)    NOT NULL,
+        Address             VARCHAR(100),
+        Phone               CHAR(10),
+      CONSTRAINT PUBLISHER_PK PRIMARY KEY (Name)
+      );
+
+    CREATE TABLE BOOK
+      ( Book_id             INT            NOT NULL,
+        Title               VARCHAR(100)   NOT NULL,
+        Publisher_name      VARCHAR(50),
+      CONSTRAINT BOOK_PK PRIMARY KEY (Book_id),
+      CONSTRAINT BOOK_PUBLISHER_FK FOREIGN KEY (Publisher_name) REFERENCES PUBLISHER(Name)
+                                   ON DELETE SET NULL
+                                   ON UPDATE CASCADE
+      );
+
+    CREATE TABLE BOOK_AUTHORS
+      ( Book_id             INT            NOT NULL,
+        Author_name         VARCHAR(50)    NOT NULL,
+      CONSTRAINT BOOK_AUTHORS_PK PRIMARY KEY (Book_id, Author_name),
+      CONSTRAINT BOOK_AUTHORS_BOOK_FK FOREIGN KEY(Book_id) REFERENCES BOOK(Book_id)
+                                      ON DELETE CASCADE
+                                      ON UPDATE CASCADE
+      );
+
+    CREATE TABLE LIBRARY_BRANCH
+      ( Branch_id           INT            NOT NULL,
+        Branch_name         VARCHAR(50)    NOT NULL,
+        Address             VARCHAR(100),
+      CONSTRAINT LIBRARY_BRANCH_PK PRIMARY KEY (Branch_id)
+      );
+
+    CREATE TABLE BORROWER
+      ( Card_no             CHAR(16)       NOT NULL,
+        Name                VARCHAR(50)    NOT NULL,
+        Address             VARCHAR(100),
+        Phone               CHAR(10),
+      CONSTRAINT BORROWER_PK PRIMARY KEY (Card_no)
+      );
+
+    CREATE TABLE BOOK_COPIES
+      ( Book_id             INT            NOT NULL,
+        Branch_id           INT            NOT NULL,
+        No_of_copies        INT            NOT NULL,
+      CONSTRAINT BOOK_COPIES_PK PRIMARY KEY (Book_id, Branch_id),
+      CONSTRAINT BOOK_COPIES_BOOK_FK FOREIGN KEY (Book_id) REFERENCES BOOK(Book_id)
+                                     ON DELETE CASCADE
+                                     ON UPDATE CASCADE,
+      CONSTRAINT BOOK_COPIES_BRANCH_FK FOREIGN KEY (Branch_id) REFERENCES LIBRARY_BRANCH(Branch_id)
+                                       ON DELETE SET NULL
+                                       ON UPDATE CASCADE
+      );
+
+    CREATE TABLE BOOK_LOANS
+      ( Book_id             INT            NOT NULL,
+        Branch_id           INT            NOT NULL     DEFAULT 0,
+        Card_no             CHAR(16)       NOT NULL     DEFAULT '',
+        Date_out            DATE           NOT NULL,
+        Due_date            DATE           NOT NULL,
+      CONSTRAINT BOOK_COPIES_PK PRIMARY KEY (Book_id, Branch_id, Card_no),
+      CONSTRAINT BOOK_COPIES_BOOK_FK FOREIGN KEY (Book_id) REFERENCES BOOK(Book_id)
+                                     ON DELETE CASCADE
+                                     ON UPDATE CASCADE,
+      CONSTRAINT BOOK_COPIES_BRANCH_FK FOREIGN KEY (Branch_id) REFERENCES LIBRARY_BRANCH(Branch_id)
+                                       ON DELETE SET DEFAULT
+                                       ON UPDATE CASCADE,
+      CONSTRAINT BOOK_COPIES_BORROWER_FK FOREIGN KEY (Card_no) REFERENCES BORROWER(Card_no)
+                                         ON DELETE SET DEFAULT
+                                         ON UPDATE CASCADE
+      );

@@ -1,0 +1,280 @@
+----------------------------------------------------
+CHAPTER 7 - THE ENTITY RELATIONSHIP MODEL
+----------------------------------------------------
+
+- Stages of Database Design
+
+    1. Requirements Collection and Analysis
+
+         We collect the user-defined operations that will be applied, including retrievals and updates.
+
+
+    2. Conceptual Design
+
+         We create a high-level model, which includes the entity types, relationships, and constraints.
+           We can also define the high-level queries.
+
+
+    3. Logical Design
+
+         Here, we implement the database in a RDBMS.
+
+
+    4. Physical Design
+
+         Here, the internal storage structures, file organizations, indexes, access paths, and physical
+           design parameters for the database files are specified.
+
+
+
+- Sample Database Application
+
+    Our sample database application, called COMPANY, will be used to demonstrate the ER concepts.  The
+      COMPANY database keeps track of a company's employees, departments, and projects.
+
+      1. The company is organized into departments.  Each department has a unique name, a unique number,
+           and a single employee who manages the department.  We keep track of the start date when the
+           employee started managing the department.  A department may have several locations.
+
+      2. A department controls a number of projects, each of which has a unique name, a unique number,
+           and a single location.
+
+      3. We store each employee's name, SSN, address, salary, sex, and birth date.  An employee is 
+           assigned to one department, but may work on several projects, which are not necessarily
+           controlled by the same department.  We keep track of the current number of hours per week
+           that an employee works on each project.  We also keep track of the direct supervisor of the
+           employee.
+
+      4. We want to keep track of the dependents of each employee for insurance purposes.  We keep each
+           employee's first name, sex, birth date, and relationship to the employee.
+
+
+
+- Entities and Attributes
+
+    - An 'entity' is a thing in the real world with an independent existence.
+
+    - Each entity has 'attributes', the properties that describe it.
+
+    - Attributes that are not divisible are 'simple attributes' (aka 'atomic attributes').  A zip code
+        is an example.  'Composite attributes' form a hierarchy.  An address with number, street
+        name, and zip code parts is an example.
+
+    - 'Single-valued attributes' have a single value for a particular entity.  The age of a person is
+        an example.  'Multivalued attributes' may have different numbers of values for an entity.  A
+        person's college degrees is an example.
+
+    - 'Stored attributes' are stored directly in the database.  'Derived attributes' can be derived from
+        information stored in the database.  An example is a person's age from their DOB.
+
+    - Some attributes can have NULL values.  The NULL values arise from two scenarios.  The first is that
+        a value exists, but is unknown.  The second case arises when it is not known whether the value
+        exists.  
+
+    - In general, composite and multivalued attributes can be arbitrarily nested.
+
+
+
+- Entity Types, Entity Sets, Keys, and Domains
+
+    - An 'entity type' defines a collection of entities that have the same attributes.  This is analogous
+        to a table.  The collection of all entities of a particular entity type are called an 'entity set'.
+        This is analogous to the tuples in a table.
+
+    - A 'key value' serves as a uniqueness constraint on attributes.  An entity usually has one or more
+        attributes whose values are distinch for each entity in the entity set.  
+
+    - An entity type with no key is called a 'weak entity type'.
+
+    - Each attribute of an entity type has a 'domain' of values, which specifies the set of values that
+        may be assigned to that attribute for each additional entity.
+
+
+
+- Initial Entities for COMPANY Database
+
+    DEPARTMENT
+      Name (Key Attribute)
+      Number (Key Attribute)
+      Manager
+      Manager_start_date
+      Locations (Multivalued Attribute)
+
+    PROJECT
+      Name (Key Attribute)
+      Number (Key Attribute)
+      Location
+      Controlling Department
+
+    EMPLOYEE
+      Ssn (Key Attribute)
+      Name
+        Fname
+        Minit
+        Lname
+      Department
+      Birth_date
+      Sex
+      Salary
+      Supervisor
+      Address
+      Works_on (Multivalued Attribute)
+        Project
+        Hours
+
+    DEPENDENT
+      Employee
+      Dependent_name
+      Relationship
+      Birth_date
+      Sex
+
+
+
+- Relationships
+
+    - 'Relationships' are references between entities.  We capture the relationships by representing
+        them as attributes.
+
+        EMPLOYEE <-> WORKS_FOR <-> DEPARTMENT
+
+
+    - The 'degree' of a relationship is the number of participating entity types.  A 'binary' relationship
+        has a degree of 2, and a 'ternary' relationship has a degree of 3.  
+
+
+    - A 'recursive relationship' involves the same entity participating in a relationship more than
+        once.  
+
+        EMPLOYEE <-> SUPERVISES <-> EMPLOYEE
+
+
+    - A 'cardinality ratio' specifies the maximum number of relationship instances that an entity can 
+        participate in.  The possible cardinality ratios are 1:1, 1:N, N:1, and M:N.
+
+        1:1
+        EMPLOYEE <-> MANAGES <-> DEPARTMENT
+
+        M:N
+        EMPLOYEE <-> WORKS_ON <-> PROJECT
+
+
+    - A 'participation constraint' specifies the minimum number of relationship instances that an entity
+        can participate in.  The 2 types of participation constraints are 'total' and 'partial'.  
+
+      For instance, if there is a constraint that every employee must work for a department, then the
+        participation of EMPLOYEE in WORKS_FOR is 'total participation'.  This is aka an 'existence
+        dependency'.
+
+      Since we do not expect every employee to manage a department, the participation of EMPLOYEE in 
+        MANAGES is 'partial participation'.
+
+
+    - In ER diagrams, entity types are rectangles, relationships are diamonds between the entities,
+        partial participation is a single line between entities, and total participation is a double
+        line between entities.
+
+
+
+- Attributes of Relationship Types
+
+    - Relationship types can also have attributes, similar to those of entity types.
+
+        EMPLOYEE <-> WORKS_ON <-> PROJECT
+                       - Hours
+
+
+    - Attributes of 1:1 or 1:N relationships can be migrated to one of the participating entities.  
+        1:1 relationship attributes can be migrated to either entity.  1:N relationship attributes
+        must be migrated to the 'N' side.
+
+
+    - Attributes of M:N relationships must be specified as relationship attributes.
+
+
+
+- Weak Entity Types
+
+    - 'Weak entity types' are entity types that do not have their own key attributes.  They belong
+        to an 'owner entity type', which is a 'strong entity type'.
+
+        DEPENDENT <-> BELONGS_TO <-> EMPLOYEE
+
+
+    - An 'identifying relationship' relates a weak entity type to its owner.  The weak entity type's
+        participation in this relationship is always total.
+
+
+
+- Relationships in COMPANY Database
+
+    1. MANAGES
+         - 1:1 relationship between EMPLOYEE and DEPARTMENT
+         - EMPLOYEE participation is partial
+         - DEPARTMENT participation is total
+
+    2. WORKS_FOR
+         - 1:N relationship between DEPARTMENT and EMPLOYEE
+         - both participations are total
+
+    3. CONTROLS
+         - 1:N relationship between DEPARTMENT and PROJECT
+         - PROJECT participation is total
+         - DEPARTMENT participation is partial, since some departments control no projects
+
+    4. SUPERVISION
+         - 1:N relationship between EMPLOYEE and EMPLOYEE
+         - both participations are partial, since not every employee has a supervisor
+
+    5. WORKS_ON
+         - M:N relationship between EMPLOYEE and PROJECT
+         - both participations are total
+         - has the 'Hours' attribute
+
+    6. DEPENDENTS_OF
+         - 1:N relationship between EMPLOYEE and DEPENDENT
+         - EMPLOYEE participation is partial
+         - DEPENDENT participation is total
+
+
+
+- Naming Conventions We Use
+
+    1. Entities are singular nouns.
+    2. Relationships are verbs.
+    3. Names are uppercase, separated by underscores.
+
+
+
+- ER Diagram for COMPANY Schema
+
+    - Standard ER Diagram with single/double lines for partial/total participation is at
+        'images/company_schema/ER-Original.jpeg'
+
+    - Alternative ER Diagram with (m,n) syntax that describe both participation and cardinality is at
+        'image/company_schema/ER-Alternate.jpeg'
+
+
+
+- UML Diagrams
+
+    - In UML, entities are called 'classes'.  They include both attributes and operations that can be
+        applied to class instances.  
+
+    - Relationships are called 'associations', and relationship instances are called 'links'.
+
+    - UML Diagram for the COMPANY schema is at 'images/company_schema/UML.jpeg'
+
+
+
+- Ternary Relationships
+
+    SUPPLIER   <->   SUPPLY      <->   PROJECT
+      Sname            Quantity          Proj_name
+
+                        ^
+                        |
+                        v
+
+                     PART
+                       Part_no

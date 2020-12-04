@@ -1,0 +1,25 @@
+----------------------------------------------------
+CHAPTER 2 - DATABASE ARCHITECTURE
+----------------------------------------------------
+
+- Levels of Data Modeling
+
+    Conceptual = ER Model
+    Implementational = Relational Model
+    Physical = Record formats, Access paths, and Indexes
+
+
+
+- DBMS Implementation
+
+    - Access to disk is normally controlled by the OS.  However, many DBMS's have their own buffer
+        management module to schedule disk reads/writes, since this has a considerable effect
+        on performance.  
+
+    - The DDL compiler processes schema definitions and stores the metadata in the catalog.  The
+        catalog includes the names and sizes of files, names and data types of data items, 
+        storage details of each file, mapping information among schemas, and constraints.  
+
+    - The query compiler compiles queries into an internal form.  Then, the query optimizer 
+        rearranges and reorders operations, eliminates redundancies, and picks the correct
+        algorithms and indexes to use for the query.

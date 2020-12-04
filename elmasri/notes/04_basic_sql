@@ -1,0 +1,369 @@
+----------------------------------------------------
+CHAPTER 4 - BASIC SQL
+----------------------------------------------------
+
+- Sample Schema
+
+    CREATE TABLE EMPLOYEE
+        ( Fname             VARCHAR(15)       NOT NULL,
+          Minit             CHAR,
+          Lname             VARCHAR(15)       NOT NULL,
+          Ssn               CHAR(9)           NOT NULL,
+          Bdate             DATE,
+          Address           VARCHAR(30),
+          Sex               CHAR,
+          Salary            DECIMAL(10,2),
+          Super_ssn         CHAR(9),
+          Dno               INT               NOT NULL,
+        CONSTRAINT EMPLOYEE_PK PRIMARY KEY (Ssn),
+        CONSTRAINT EMP_SUP_FK FOREIGN KEY (Super_ssn) REFERENCES EMPLOYEE(Ssn),
+        CONSTRAINT EMP_DEPT_FK FOREIGN KEY (Dno) REFERENCES DEPARTMENT(Dnumber) );
+
+    CREATE TABLE DEPARTMENT
+        ( Dname             VARCHAR(15)       NOT NULL,
+          Dnumber           INT               NOT NULL,
+          Mgr_ssn           CHAR(9)           NOT NULL,
+          Mgr_start_date    DATE,
+        CONSTRAINT DEPARTMENT_PK PRIMARY KEY (Dnumber),
+        UNIQUE (Dname),
+        CONSTRAINT DEPT_EMP_FK FOREIGN KEY (Mgr_ssn) REFERENCES EMPLOYEE(Ssn) );
+
+    CREATE TABLE DEPT_LOCATIONS
+        ( Dnumber           INT               NOT NULL,
+          Dlocation         VARCHAR(15)       NOT NULL,
+        CONSTRAINT DEPT_LOCATIONS_PK PRIMARY KEY (Dnumber, Dlocation),
+        CONSTRAINT LOC_DEPT_FK FOREIGN KEY (Dnumber) REFERENCES DEPARTMENT(Dnumber) );
+
+    CREATE TABLE PROJECT
+        ( Pname             VARCHAR(15)       NOT NULL,
+          Pnumber           INT               NOT NULL,
+          Plocation         VARCHAR(15),
+          Dnum              INT               NOT NULL,
+        CONSTRAINT PROJECT_PK PRIMARY KEY (Pnumber),
+        UNIQUE (Pname),
+        CONSTRAINT PROJ_DEPT_FK FOREIGN KEY (Dnum) REFERENCES DEPARTMENT(Dnumber) );
+
+    CREATE TABLE WORKS_ON
+        ( Essn              CHAR(9)           NOT NULL,
+          Pno               INT               NOT NULL,
+          Hours             DECIMAL(3,1)      NOT NULL,
+        CONSTRAINT WORKS_ON_PK PRIMARY KEY (Essn, Pno),
+        CONSTRAINT WORKS_EMP_FK FOREIGN KEY (Essn) REFERENCES EMPLOYEE(Ssn),
+        CONSTRAINT WORKS_PROJ_FK FOREIGN KEY (Pno) REFERENCES PROJECT(Pnumber) );
+
+    CREATE TABLE DEPENDENT
+        ( Essn              CHAR(9)           NOT NULL,
+          Dependent_name    VARCHAR(15)       NOT NULL,
+          Sex               CHAR,
+          Bdate             DATE,
+          Relationship      VARCHAR(8),
+        CONSTRAINT DEPENDENT_PK PRIMARY KEY (Essn, Dependent_name),
+        CONSTRAINT DEPEND_EMP_FK FOREIGN KEY (Essn) REFERENCES EMPLOYEE(Ssn) );
+
+
+
+- SQL Data Types
+
+    - Numeric Types
+
+        INTEGER or INT
+        SMALLINT
+
+        FLOAT or REAL
+        DOUBLE PRECISION
+
+        DECIMAL(i,j) or DEC(i,j) or NUMERIC(i,j)
+
+
+    - Character types
+
+        CHAR(n) or CHARACTER(n)
+        VARCHAR(n)
+
+
+    - Bit Types
+
+        BIT(n)
+        BIT VARYING(n)
+        BLOB
+
+
+    - Boolean Type
+
+        BOOL
+
+
+    - Datetime Types
+
+        DATE [WITH TIME ZONE]
+        TIME [WITH TIME ZONE]
+        TIMESTAMP
+        INTERVAL
+
+
+    - User-Defined Types
+
+        CREATE DOMAIN SSN_TYPE AS CHAR(9);
+
+
+
+- Naming Constraints
+
+    Constraints can have a name for convenience, but they don't have to.
+
+    # Valid
+    PRIMARY KEY (Ssn)
+    FOREIGN KEY (Superssn) REFERENCES EMPLOYEE (Ssn)
+
+
+    # Also Valid
+    CONSTRAINT EMPLOYEE_PK PRIMARY KEY (Ssn)
+    CONSTRAINT EMP_SUP_FK FOREIGN KEY (Superssn) REFERENCES EMPLOYEE (Ssn)
+
+
+
+- Setting Defaults
+
+    # Set a default value for an attribute
+    Mgr_ssn     CHAR(9)      NOT NULL       DEFAULT '9999999999'
+
+
+
+- Check constraints
+
+    # Set a check constraint for an attribute
+    CHECK (D_NUM > 0 AND D_NUM < 21)
+
+
+
+- Foreign Key Triggers
+
+    - Referential integrity can be violated when tuples are deleted or inserted.  The default action that
+        SQL takes for an integrity violation is to reject the update operation that will cause a violation.
+        This is known as the RESTRICT option.
+
+
+    - However, an alternative action can be specified by attaching a referential triggered action.  The
+        options are:
+
+        - SET NULL
+        - CASCADE
+        - SET DEFAULT
+
+      An option must be qualified with:
+
+        - ON DELETE
+        - ON UPDATE
+
+
+    - For instance, if the employee's supervisor is set as
+
+        FOREIGN KEY (Super_ssn) REFERENCES EMPLOYEE (Ssn)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE
+
+      If the supervisor tuple is deleted, the value of 'Superssn' is set to NULL.
+      If the supervisor tuple is updated, the value of 'Superssn' is set to the new value.
+
+
+    - The ON DELETE CASCADE option means that if a tuple is deleted, all referencing tuples are deleted
+        also.
+
+
+
+- Query Example #1 - Join Condition in WHERE Clause
+
+    # Retrieve the name and address of all employees who work for the research department
+
+    SELECT Fname, Lname, Address
+    FROM EMPLOYEE, DEPARTMENT
+    WHERE Dname = 'Research' 
+      AND Dnumber = Dno;
+
+
+
+- Query Example #2 - Two Join Conditions in WHERE Clause
+
+    # For every project located in 'Stafford', list the project number, the controlling dept number,
+    #   and the dept managers last name, address, and birth date
+
+    SELECT Pnumber, Dnum, Lname, Address, Bdate
+    FROM PROJECT, DEPARTMENT, EMPLOYEE
+    WHERE Dnumber = Dnum 
+      AND Mgr_ssn = Ssn 
+      AND Plocation = 'Stafford;
+
+
+
+- Query Example #3 - Aliasing Relations
+
+    # For each employee, retrieve the employee's first and last name, and retrieve the first and last
+    #   name of their supervisor
+
+    SELECT E.Fname, E.Lname, S.Fname, S.Lname
+    FROM EMPLOYEES AS E, EMPLOYEES AS S
+    WHERE E.Super_ssn = S.Ssn;
+
+
+
+- Query Example #4 - Fully-Qualified Attributes
+
+    SELECT EMPLOYEE.Fname, EMPLOYEE.Lname, EMPLOYEE.Address
+    FROM EMPLOYEE, DEPARTMENT
+    WHERE DEPARTMENT.Dname = 'Research'
+      AND DEPARTMENT.Dnumber = EMPLOYEE.Dno;
+
+
+
+- Query Example #5 - Asterisk Queries
+
+    # Get all attributes for employees in dept 5
+    SELECT *
+    FROM EMPLOYEE
+    WHERE Dno=5;
+
+
+    # Get all attributes of employees and their departments for the Research dept
+    SELECT *
+    FROM EMPLOYEE, DEPARTMENT
+    WHERE Dname = 'Research' AND Dno = Dnumber;
+
+
+    # Get the cross product of the employee and department relations
+    SELECT *
+    FROM EMPLOYEE, DEPARTMENT;
+
+
+
+- Query Example #6 - Distinct Values
+
+    # Get all the unique salaries for employees
+    SELECT DISTINCT Salary
+    FROM EMPLOYEE;
+
+
+
+- Query Example #7 - UNION Operation
+
+    # Get all the project numbers for projects that involve an employee whose last name is 'Smith',
+    #   either as a worker or as a manager of the department that controls the project
+
+      (SELECT DISTINCT Pnumber
+       FROM PROJECT, DEPARTMENT, EMPLOYEE,
+       WHERE Dnum = Dnumber AND Mgr_ssn = Ssn AND Lname = 'Smith')
+    UNION
+      (SELECT DISTINCT Pnumber
+       FROM PROJECT, WORKS_ON, EMPLOYEE
+       WHERE Pnumber = Pno AND Essn = Ssn AND Lname = 'Smith')
+
+
+
+- List of SQL Set Operations
+
+    # Standard set operations
+    UNION         Set union
+    EXCEPT        Set difference
+    INTERSECT     Set intersection
+
+    # Multiset operations (don't remove duplicates)
+    UNION ALL
+    EXCEPT ALL
+    INTERSECT ALL
+
+
+
+- Query Example # 8 - Pattern Matching
+
+    # Get all employees whose address is in Houston, TX
+    #   (% replaces 0 or more characters)
+
+    SELECT Fname, Lname
+    FROM EMPLOYEE
+    WHERE Address LIKE '%Houston, TX%'
+
+
+    # Get all employees who were born in the 1950s
+    #   (_ replaces a single character)
+
+    SELECT Fname, Lname
+    FROM EMPLOYEE
+    WHERE Bdate LIKE '__5_______'
+
+
+
+- Query Example # 9 - Arithmetic in Queries
+
+    # Show the resulting salaries if everyone on the 'ProductX' project is given a 10% raise
+    SELECT E.Fname, E.Lname, 1.1 * E.Salary AS Increased_sal
+    FROM EMPLOYEE AS E, WORKS_ON AS W, PROJECT AS P
+    WHERE E.Ssn = W.Essn AND W.Pno = P.Pnumber AND P.Pname = 'ProductX'
+
+
+
+- Query Example #10 - The BETWEEN Operator
+
+    # Retrieve all employees in Dept 5 that make between $30K and $40K
+    SELECT *
+    FROM EMPLOYEE
+    WHERE (Salary BETWEEN 30000 AND 400000) AND Dno = 5
+
+
+
+- Query Example #11 - Ordering Query Results
+
+    # Retrieve all the employees and the projects they are working on, ordered by department,
+    #   and ordered by last, then first name within each department
+
+    SELECT D.Dname, E.Lname, E.Fname, P.Pname
+    FROM DEPARTMENT D, EMPLOYEE E, WORKS_ON W, PROJECT P
+    WHERE D.Dnumber = E.Dno AND E.Ssn = W.Essn AND W.Pno = P.Pnumber
+    ORDER BY D.Dname, E.Lname, E.Fname
+
+    # Default ordering is ASC, can also use DESC
+
+
+
+- The INSERT Command
+
+    # Insert with all attributes specified
+    INSERT INTO EMPLOYEE
+    VALUES ('Richard', 'K', 'Marini', '222334444', '1960-01-01', '123 Main St, Katy, TX', 
+            'M', 37000, '222334444', 4);
+
+
+    # Insert with specific attributes
+    INSERT INTO EMPLOYEE (Fname, Lname, Dno, Ssn)
+    VALUES ('Richard', 'Marini', 4, '222334444');
+
+
+    Note that all key and referential integrity must be satisfied, or the INSERT will not succeed.
+
+
+    # Insert using the result of a query
+    INSERT INTO WORKS_ON_INFO (Emp_name, Proj_name, Hours_per_week)
+    SELECT E.Lname, P.Pname, W.Hours
+    FROM PROJECT P, WORKS_ON W, EMPLOYEE E
+    WHERE P.Pnumber = W.Pno AND W.Essn = E.Ssn;
+
+
+
+- The DELETE Command
+
+    # Delete tuple
+    DELETE FROM EMPLOYEE
+    WHERE Lname = 'Brown';
+
+
+
+- The UPDATE Command
+
+    # Update tuple
+    UPDATE PROJECT
+    SET Plocation = 'Bellaire', Dnum = 5
+    WHERE Pnumber = 10;
+
+
+    # Update based on previous column value
+    UPDATE PROJECT
+    SET Salary = Salary * 1.1
+    WHERE Dno = 5;
