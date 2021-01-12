@@ -1,0 +1,119 @@
+-----------------------------------------------------------------------
+|  CHAPTER 1 - DW, BI, & DIMENSIONAL MODELING PRIMER                  |
+-----------------------------------------------------------------------
+
+- Data Capture and Data Analysis
+
+    - Data assets of any organiation are used for 2 purposes:
+
+        1. Operational record keeping
+             - Turn the wheels of the organization
+             - Optimized to process transactions quickly
+             - Deal with one transaction record at a time
+             - Do not maintain history, update data to reflect the most current state
+
+        2. Analysis
+             - Watch the wheels turn to evaluate performance
+             - Ask questions about the business to make sure operations are working correctly
+             - Optimized for queries over thousands of transactions
+
+
+    - Some DW/BI systems are just copies of the operational data stored on a separate hardware
+        platform.  These are not typically useful, though.
+
+
+
+- Goals of DW and BI
+
+    - The DW/BI system must make information easily accessible.
+
+        - The data should be intuitive and obvious to business users
+        - The tools and applications must be simple and easy to use
+        - Query results must be returned with minimal wait times
+
+
+    - The DW/BI system must present information consistently.
+
+        - The data must be credible
+        - The data must be carefully assembled, cleaned, QA'ed, and released only when ready
+        - Fields and labels should be the same across data sources
+
+
+    - The DW/BI system must adapt to change.
+
+        - Must handle change gracefully without invalidating existing data or applications
+        - If system must be modified, changes should be transparent to users
+
+
+    - The DW/BI system must present information in a timely way.
+
+        - Raw data may need to be converted into actionable data within hours, minutes, or seconds
+        - Business users must have realistic expectations for data when there is little time to clean it
+
+
+    - The DW/BI system must be a secure bastion that protects the information assets.
+
+        - An organization's information crown jewels are stored in the DW
+        - The system must effectively control access
+
+
+    - The DW/BI system must serve as the authoritative and trustworthy foundation for 
+        improved decision making.
+
+        - The DW must have the right data to support decision making
+        - We must build a Decision Support System
+
+
+    - The business users must accept the DW/BI system to deem it successful.
+
+        - The system must be actively used
+        - If the system is simple and fast, it will be much more likely to be used
+
+
+
+- A DW/BI Manager's Responsibilities
+
+    - Understand the Business Users
+
+        - Understand responsibilities, goals, and objectives
+        - Determine the decisions that business users want help making
+        - Identify the "best" users who make high-impact decisions
+        - Find potential new users
+
+
+    - Deliver High-Quality, Relevant, and Acessible Information and Analytics
+
+        - Choose the best data sources
+        - Make UIs simple and match to users' thinking processes
+        - Make sure the data is accurate and can be trusted
+        - Continuously monitory the accuracy of data
+        - Adapt to changing users and business 
+
+
+    - Sustain the DW/BI Environment
+
+        - Take a portion of the credit for successes
+        - Update the system on a regular basis
+        - Maintain the business users' trust
+        - Keep users, sponsors, and management happy
+
+
+
+- Dimensional Modeling
+
+    - Dimensional modeling is widely preferred, because it addresses 2 requirements:
+
+        1. Deliver information that is understandable to business users
+        2. Deliver fast query performance
+
+
+    - An executive might describe their business as "We sell products in various markets and
+        measure our performance over time."  It is natural to think of this business as a 
+        cube of data, with edges labeled Product, Market, and Time.
+
+
+    - Operational systems use 3NF and ERDs to remove redundancy.  This is so that an insert or
+        update transaction only has to touch the database in one place.
+
+      However, normalized models are often too complicated for BI queries.  So, we reduce the
+        level of normalization when dimensional modeling.
