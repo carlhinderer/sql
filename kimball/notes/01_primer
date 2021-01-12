@@ -117,3 +117,177 @@
 
       However, normalized models are often too complicated for BI queries.  So, we reduce the
         level of normalization when dimensional modeling.
+
+
+
+- Star Schemas vs OLAP Cubes
+
+    - Dimensional models implemented in RDBMS's are known as 'star schemas', due to their
+        resemblance to a star-like structure.  
+
+
+    - Dimensional models implemented in multidimensional database environments are referred to
+        as 'OLAP cubes'.
+
+      When data is loaded into an OLAP cube, it is stored and indexed using techniques and 
+        designed for dimensional data.  Performance aggregations or precalculated summary tables
+        are often managed by the OLAP cube engine.  This allows them to deliver superior query
+        performance, but it makes loading data slower, particularly with large datasets.
+
+
+
+- OLAP Cube Deployment Considerations
+
+    - A star schema hosted in a REBMS is a good physical foundation for building an OLAP cube.
+        The star schema is generally considered more stable for backup and recovery.
+
+
+    - OLAP cubes have traditionally had much better query performance, but the margins are
+        narrowing.
+
+
+    - OLAP cubes are better at:
+        - Offering fine-grained security
+        - Offering rich analysis capabilities
+        - Supporting hierarchies of arbitrary depth
+
+
+    - Star schemas are better at:
+        - Being portable across platforms
+        - Supporting changing dimensions
+        - Supporting accumulating snapshots
+        - Allowing flexibility of dimension keys
+
+
+
+- Fact Tables
+
+    - A 'fact table' stores the performance measurements resulting from an organization's 
+        business process events.  We should strive to store the low-level measurement data
+        resulting from a business process in this single model.
+
+
+    - Since the fact table is overwhelmingly the largest set of data, we should strive to store
+        it in a single place, rather than replicating it across the organization.
+
+      Fact tables often make up 90% or more of the total space consumed by a dimensional model.
+
+
+    - A 'fact' represents a business measurement.  We can imagine standing in a store, watching
+        products being sold and writing down the unit quantity and dollar sales amout for each
+        product in each sales transaction.
+
+
+    - Each row in a fact table corresponds to a measurement event.  The data in each row is at
+        a specific level of detail, referred to as the 'grain'.  In our example, this is one
+        row per product in a sales transaction.
+
+      All measurements in a fact table must be at the same grain.
+
+
+    - For example, 
+
+        [Retail Sales Facts]
+          + Date Key (FK)
+          + Product Key (FK)
+          + Store Key (FK)
+          + Promotion Key (FK)
+          + Customer Key (FK)
+          + Clerk Key (FK)
+          + Transaction #
+          + Sales Dollars
+          + Sales Units
+
+
+    - The most useful facts are numeric and additive, such as dollar sales amount.  Additivity
+        is crucial, since we're not usually querying for a single row, but many rows.
+
+      Semi-additive facts, such as account balances, cannot be summed across the time dimension.
+
+      Non-additive facts, such as unit prices, can never be added.  Only counts and averages can
+        be used.
+
+
+    - When trying to sort facts and dimensions, facts are often described as continuous values.
+
+
+    - All fact table grains fall into one of 3 categories:
+
+        1. Transactions (most common)
+        2. Periodic Snapshots
+        3. Accumulating Snapshots
+
+
+    - A fact table generally has a composite primary key, consisting of some subset of its foreign
+        keys.
+
+
+
+- Dimension Tables
+
+    - 'Dimension tables' contain the textual content associated with a business process
+        measurement event.  They often have many columns.  They describe the 'who, what,
+        where, why, when, and how' of the event.
+
+
+    - Example
+
+        [Product Dimension]
+          + Product Key (PK)
+          + SKU Number (Natural Key)
+          + Product Description
+          + Brand Name
+          + Category Name
+          + Department Name
+          + Package Type
+          + Package Size
+          + Abrasive Indicator
+          + Weight
+          + Weight Unit of Measure
+          + Storage Type
+          + Shelf Life Type
+          + Shelf Width
+          + Shelf Height
+          + Shelf Depth
+          + ...
+
+
+    - Dimension tables attributes are the primary source of query constraints, groupings, and
+        report labels.
+
+
+    - Operational codes sometimes have intelligence embedded in them. For example: 
+        - the first two digits may identify the line of business
+        - the next two digits may identify the global region 
+
+      Rather than forcing users to interrogate or filter on substrings within the operational 
+        codes, pull out the embedded meanings and present them to users as separate dimension 
+        attributes that can easily be filtered, grouped, or reported.
+
+
+    - The analytic power of the DW/BI environment is directly proportional to the depth and 
+        quality of the dimension attributes.
+
+
+    - Dimension tables often represent hierarchical relationships.  For example, products roll
+        up into brands, and then into categories.  
+
+      This hierarchical information should be stored redundantly in the spirit of ease of use
+        and query performance.
+
+        Product Key       Product Description          Brand Name            Company Name
+        ------------------------------------------------------------------------------------
+        1                 PowerAll 20 oz               PowerClean            All Purpose Cleaner
+        2                 PowerAll 32 oz               PowerClean            All Purpose Cleaner
+        3                 PowerAll 48 oz               PowerClean            All Purpose Cleaner
+        4                 PowerAll 64 oz               PowerClean            All Purpose Cleaner
+        5                 ZipAll 20 oz                 Zippy                 All Purpose Cleaner
+        6                 ZipAll 32 oz                 Zippy                 All Purpose Cleaner
+        7                 ZipAll 48 oz                 Zippy                 All Purpose Cleaner
+        8                 ZipAll 64 oz                 Zippy                 All Purpose Cleaner
+        9                 Shiny 20 oz                  Clean Fast            Glass Cleaner
+        10                Shiny 32 oz                  Clean Fast            Glass Cleaner
+
+
+    - The 'fact' and 'dimension' terminology originated from a joiont study conducted by General
+        Mills and Dartmouth University in the 1960s.
