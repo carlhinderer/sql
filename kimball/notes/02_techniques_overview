@@ -1,0 +1,210 @@
+-----------------------------------------------------------------------
+|  CHAPTER 2 - DIMENSIONAL MODELING TECHNIQUES OVERVIEW               |
+-----------------------------------------------------------------------
+
+- Fundamental Concepts
+
+    - Gather Business Requirements and Data Realities
+
+    - Collaborative Dimensional Modeling Workshops
+
+    - Four-Step Dimensional Design Process
+
+         1. Select the business process.
+         2. Declare the grain.
+         3. Identify the dimensions.
+         4. Identify the facts.
+
+    - Business Processes
+
+    - Grain
+
+    - Dimensions for Descriptive Context
+
+    - Facts for Measurements
+
+    - Star Schemas and OLAP Cubes
+
+    - Graceful Extensions to Dimensional Models
+
+
+
+- Basic Fact Table Techniques
+
+    - Fact Table Structure
+
+    - Additive, Semi-Additive, and Non-Additive Facts
+
+    - Nulls in Fact Tables
+
+    - Conformed Facts
+
+    - Transaction Fact Tables
+
+    - Periodic Snapshot Fact Tables
+
+    - Accumulating Snapshot Fact Tables
+
+    - Factless Fact Tables
+
+    - Aggregate Fact Tables or OLAP Cubes
+
+    - Consolidated Fact Tables
+
+
+
+- Basic Dimension Table Techniques
+
+    - Dimension Table Structure
+
+    - Dimension Surrogate Keys
+
+    - Natural, Durable, and Supernatural Keys
+
+    - Drilling Down
+
+    - Degenerate Dimensions
+
+    - Denormalized Flattened Dimensions
+
+    - Multiple Hierarchies in Dimensions
+
+    - Flags and Indicators as Textual Attributes
+
+    - Null Attributes in Dimensions
+
+    - Calendar Date Dimensions
+
+    - Role-Playing Dimensions
+
+    - Junk Dimensions
+
+    - Snowflaked Dimensions
+
+    - Outrigger Dimensions
+
+
+
+- Integration via Conformed Dimensions
+
+    - Conformed Dimensions
+
+    - Shrunken Dimensions
+
+    - Drilling Across
+
+    - Value Chain
+
+    - Enterprise Data Warehouse Bus Architecture
+
+    - Enterprise Data Warehouse Bus Matrix
+
+    - Detailed Implementation Bus Matrix
+
+    - Opportunity/Stakeholder Matrix
+
+
+
+- Dealing with Slowly Changing Dimension Attributes
+
+    - Type 0: Retain Original
+
+    - Type 1: Overwrite
+
+    - Type 2: Add New Row
+
+    - Type 3: Add New Attribute
+
+    - Type 4: Add Mini-Dimension
+
+    - Type 5: Add Mini-Dimension and Type 1 Outrigger
+
+    - Type 6: Add Type 1 Attributes to Type 2 Dimension
+
+    - Type 7: Dual Type 1 and Type 2 Dimensions
+
+
+
+- Dealing with Dimension Hierarchies
+
+    - Fixed Depth Positional Hierarchies
+
+    - Slightly Ragged / Variable Depth Hierarchies
+
+    - Ragged / Variable Depth Hierarchies with Hierarchy Bridge Tables
+
+    - Ragged / Variable Depth Hierarchies with Pathstring Attributes
+
+
+
+- Advanced Fact Table Techniques
+
+    - Fact Table Surrogate Keys
+
+    - Centipede Fact Tables
+
+    - Numeric Values as Attributes or Facts
+
+    - Lag / Duration Facts
+
+    - Header / Line Fact Tables
+
+    - Allocated Facts
+
+    - Profit and Loss Fact Tables Using Allocations
+
+    - Multiple Currency Facts
+
+    - Multiple Units of Measure Facts
+
+    - Year-to-Date Facts
+
+    - Multipass SQL to Avoid Fact-to-Fact Table Joins
+
+    - Timespan Tracking in Fact Tables
+
+    - Late Arriving Facts
+
+
+
+- Advanced Dimension Techniques
+
+    - Dimension-to-Dimension Table Joins
+
+    - Multivalued Dimensions and Bridge Tables
+
+    - Time Varying Multivalued Bridge Tables
+
+    - Behavior Tag Time Series
+
+    - Behavior Study Groups
+
+    - Aggregated Facts as Dimension Attributes
+
+    - Dynamic Value Bands
+
+    - Text Comments Dimension
+
+    - Multiple Time Zones
+
+    - Measure Type Dimensions
+
+    - Step Dimensions
+
+    - Hot Swappable Dimensions
+
+    - Abstract Generic Dimensions
+
+    - Audit Dimensions
+
+    - Late Arriving Dimensions
+
+
+
+- Special Purpose Schemas
+
+    - Supertype and Subtype Schemas for Heterogeneous Products
+
+    - Real-Time Fact Tables
+
+    - Error Event Schemas
