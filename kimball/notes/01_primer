@@ -377,3 +377,48 @@
         - Operational source system = raw ingredients
         - ETL system = kitchen
         - Data Presentation and BI = front dining room
+
+
+
+- Alternative DW/BI Architectures
+
+    - Independent Data Mart Architecture
+
+        - Analytic data deployed on a departmental basis without worrying about sharing across enterprise
+        - Data is in silos, this is not recommended, but is prevalent in industry
+        - Path of least resistence, due to how funds are distributed, but wasteful in long run
+
+
+    - Hub-and-Spoke Corporate Information Factory (Inmon Architecture)
+
+        - Data is extracted from source systems and put into 3NF structures in DW
+        - Enforces referential integrity of dimensions
+        - More difficult to query
+        - Could have a hybrid approach where you first do 3NF, then create dimensional model from it
+
+
+
+- Dimensional Modeling Myths
+
+    - Dimensional models are only for summary data.
+
+        - Data should be granular to allow for ad hoc queries.
+        - Atomic data can handle changes easily.
+        - Summary data should complement the atomic data.
+
+
+    - Dimensional models are departmental, not enterprise.
+
+        - Models should be organized around business processes, not departments.
+        - Multiple business processes often want to analyze the same metrics.
+
+
+    - Dimensional models are not scalable.
+
+        - Dimensional models are extremely scalable.
+
+
+    - Dimensional models are only for predictable usage.
+
+        - Dimensional models should not be designed by focusing on predefined reports or analyses.
+        - We want to keep the data atomic so that any future report can be generated.
