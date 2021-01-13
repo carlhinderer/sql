@@ -291,3 +291,89 @@
 
     - The 'fact' and 'dimension' terminology originated from a joiont study conducted by General
         Mills and Dartmouth University in the 1960s.
+
+
+
+- Facts and Dimensions Joined in a Star Schema
+
+    - The fact table and set of dimension tables that models a business process is often called a
+        'star join'.  
+
+
+    - Databases can get good query performance by first constraining the heavily indexed dimension
+        tables, then attack the fact table all at once with the Cartesian product of the dimension
+        table keys satisfying the user's constraints.  This requires only a single pass through
+        the fact table's index.
+
+
+    - We can easily imagine creating BI reports using simple SQL queries:
+
+        SELECT     
+            store.district_name,
+            product.brand,
+            sum(sales_facts.sales_dollars) AS "Sales Dollars"
+        FROM     
+            store,
+            product,
+            date,
+            sales_facts
+        WHERE
+            date.month_name="January" AND
+            date.year=2013 AND
+            store.store_key = sales_facts.store_key AND
+            product.product_key = sales_facts.product_key AND
+            date.date_key = sales_facts.date_key
+        GROUP BY     
+            store.district_name,
+            product.brand
+
+
+
+- Kimball's DW/BI Architecture
+
+    - There are 4 separate components to consider in the DW/BI system.
+
+        1. Operational source systems
+        2. ETL system
+        3. Data presentation area
+        4. BI applications
+
+
+    - Operational Source Systems
+
+        - Operational systems of record that capture business transactions
+        - Outside the DW, and we have little control over them
+        - Priorities are performance and availability
+        - Don't maintain historical data
+        - Mostly special-purpose systems without common data, but ERP may integrate them
+
+
+    - ETL System
+
+        - Extraction = read and understand source data, and copy it into DW
+        - Transform = Clean data, put into standard formats, QA, enhance data
+        - Load = Load data into physical structure of dimensional model
+        - Join 3NF tables into denormalized dimensional tables
+        - Need ETL for both fact table and dimension tables
+
+
+    - Data Presentation Area
+
+        - Area where data is organized, stored, and made available for user queries and BI apps
+        - Data should be in dimensional models, either star schemas or OLAP cubes
+        - Must contain detailed, atomic data for ad hoc queries
+        - Should be structured around business process measurement events
+        - Dimensional structures must use common, conformed dimensions
+
+
+    - BI Applications
+
+        - The range of capabilities provided to business users to leverage for decision making
+        - Can be ad hoc query tool or sophisticated modeling application
+
+
+    - Kitchen Analogy
+
+        - Operational source system = raw ingredients
+        - ETL system = kitchen
+        - Data Presentation and BI = front dining room
