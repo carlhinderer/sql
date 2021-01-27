@@ -21,14 +21,18 @@ AS (VALUES
 
 debits AS (
 SELECT sender, 
-sum(amount)
+sum(amount) AS debit_sum
 FROM transactions
 GROUP BY sender),
 
 credits AS (
 SELECT receiver,
-sum(amount) 
+sum(amount) AS credit_sum
 FROM transactions
 GROUP BY receiver)
 
-SELECT 
+SELECT debits.sender AS "user", 
+credits.credit_sum - debits.debit_sum AS net_change
+FROM debits
+JOIN credits ON debits.sender = credits.receiver
+ORDER BY net_change DESC;

@@ -1,0 +1,44 @@
+# 3. Most frequent items
+#
+#    From the following table containing a list of dates and items ordered, write a query 
+#      to return the most frequent item ordered on each date. Return multiple items in the 
+#      case of a tie.
+#
+
+/* Sample Data */
+
+WITH items (date, item) 
+AS (VALUES 
+(CAST('01-01-20' AS date),'apple'), 
+(CAST('01-01-20' AS date),'apple'), 
+(CAST('01-01-20' AS date),'pear'), 
+(CAST('01-01-20' AS date),'pear'), 
+(CAST('01-02-20' AS date),'pear'), 
+(CAST('01-02-20' AS date),'pear'), 
+(CAST('01-02-20' AS date),'pear'), 
+(CAST('01-02-20' AS date),'orange')),
+
+/* End Sample Data */
+
+
+-- Add an item count column
+
+items_with_counts AS (
+SELECT date, item, count(*) as item_count
+FROM items
+GROUP BY item, date
+ORDER BY date
+),
+
+-- Add a rank column
+
+items_with_ranked_counts AS (
+SELECT *,
+rank() OVER (PARTITION by date ORDER BY item_count DESC) AS date_rank
+FROM items_with_counts
+)
+
+
+SELECT date, item
+FROM items_with_ranked_counts
+WHERE date_rank = 1;
