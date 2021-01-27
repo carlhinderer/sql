@@ -19,6 +19,8 @@ AS (VALUES
 /* End Sample Data */
 
 
+-- Get debits and credits by sender/receiver
+
 debits AS (
 SELECT sender, 
 sum(amount) AS debit_sum
@@ -30,6 +32,7 @@ SELECT receiver,
 sum(amount) AS credit_sum
 FROM transactions
 GROUP BY receiver)
+
 
 SELECT debits.sender AS "user", 
 credits.credit_sum - debits.debit_sum AS net_change

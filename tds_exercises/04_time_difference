@@ -1,0 +1,50 @@
+# 4. Time difference between latest actions
+#
+#    From the following table of user actions, write a query to return for each user the 
+#      time elapsed between the last action and the second-to-last action, in ascending order 
+#      by user ID.
+#
+
+/* Sample Data */
+
+WITH users (user_id, action, action_date) 
+AS (VALUES 
+(1, 'start', CAST('2-12-20' AS date)), 
+(1, 'cancel', CAST('2-13-20' AS date)), 
+(2, 'start', CAST('2-11-20' AS date)), 
+(2, 'publish', CAST('2-14-20' AS date)), 
+(3, 'start', CAST('2-15-20' AS date)), 
+(3, 'cancel', CAST('2-15-20' AS date)), 
+(4, 'start', CAST('2-18-20' AS date)), 
+(1, 'publish', CAST('2-19-20' AS date))),
+
+/* End Sample Data */
+
+
+-- Rank the dates
+
+ranked_dates AS (
+SELECT *, 
+row_number() OVER (PARTITION by user_id ORDER BY action_date DESC) AS date_rank
+FROM users
+),
+
+-- Get the latest and next latest dates for each user
+
+latest AS (
+SELECT user_id, action_date
+FROM ranked_dates
+WHERE date_rank = 1
+),
+
+next_latest AS (
+SELECT user_id, action_date
+FROM ranked_dates
+WHERE date_rank = 2
+)
+
+
+SELECT latest.user_id, 
+latest.action_date - next_latest.action_date
+FROM latest
+LEFT JOIN next_latest ON latest.user_id = next_latest.user_id;

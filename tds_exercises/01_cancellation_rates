@@ -20,6 +20,8 @@ AS (VALUES
 /* End Sample Data */
 
 
+-- Get counts of starts, cancels, and publishes per user
+
 counts AS (
 SELECT user_id,
 sum(CASE WHEN action = 'start' THEN 1 ELSE 0 END) AS starts,
