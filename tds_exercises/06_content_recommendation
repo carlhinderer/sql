@@ -1,0 +1,37 @@
+# 6. Content Recommendation
+#
+#    Using the following two tables, write a query to return page recommendations to a social 
+#      media user based on the pages that their friends have liked, but that they have not yet 
+#      marked as liked. Order the result by ascending user ID.
+#
+
+/* Sample Data */
+
+WITH friends (user_id, friend) 
+AS (VALUES 
+(1, 2), (1, 3), (1, 4), (2, 1), (3, 1), (3, 4), (4, 1), (4, 3)),
+
+likes (user_id, page_likes) 
+AS (VALUES 
+(1, 'A'), (1, 'B'), (1, 'C'), (2, 'A'), (3, 'B'), (3, 'C'), (4, 'B')),
+
+/* End Sample Data */
+
+
+-- Get pages friends liked
+pages_friend_liked AS (
+SELECT DISTINCT friends.user_id, likes.page_likes
+FROM friends
+JOIN likes on friends.friend = likes.user_id
+ORDER BY friends.user_id)
+
+
+SELECT pages_friend_liked.user_id, pages_friend_liked.page_likes
+FROM pages_friend_liked
+WHERE NOT EXISTS (
+SELECT *
+FROM likes
+WHERE pages_friend_liked.user_id = likes.user_id
+AND pages_friend_liked.page_likes = likes.page_likes
+)
+ORDER BY pages_friend_liked.user_id;
