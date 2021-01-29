@@ -1,0 +1,41 @@
+# 7. Mobile and Web Visitors
+#
+#    With the following two tables, return the fraction of users who only visited mobile, 
+#      only visited web, and visited both.
+#
+
+/* Sample data */
+
+WITH mobile (user_id, page_url) 
+AS (VALUES 
+(1, 'A'), (2, 'B'), (3, 'C'), (4, 'A'), (9, 'B'), (2, 'C'), (10, 'B')),
+
+web (user_id, page_url) 
+AS (VALUES 
+(6, 'A'), (2, 'B'), (3, 'C'), (7, 'A'), (4, 'B'), (8, 'C'), (5, 'B')),
+
+/* End Sample Data */
+
+
+-- Get mobile and web users
+all_users AS (
+SELECT mobile.user_id as mobile_user,
+web.user_id as web_user
+FROM mobile
+FULL OUTER JOIN web ON mobile.user_id = web.user_id
+),
+
+-- Get the counts of mobile, web, and both
+counts AS (
+SELECT sum(CASE WHEN mobile_user IS NOT NULL AND web_user IS NULL THEN 1 ELSE 0 END ) AS n_mobile,
+       sum(CASE WHEN web_user IS NOT NULL AND mobile_user IS NULL THEN 1 ELSE 0 END ) AS n_web,
+       sum(CASE WHEN web_user IS NOT NULL AND mobile_user IS NOT NULL THEN 1 ELSE 0 END ) AS n_both, 
+       count(*) AS n_total
+FROM all_users
+)
+
+
+SELECT 1.0 * n_mobile / n_total AS percentage_mobile,
+       1.0 * n_web / n_total AS percentage_web,
+       1.0 * n_both / n_total AS percentage_both
+FROM counts;
