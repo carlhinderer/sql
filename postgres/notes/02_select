@@ -19,7 +19,7 @@ CHAPTER 2 - SELECT
     FROM teachers;
 
     # Return unique pairs of values
-    SELECT school, salary
+    SELECT DISTINCT school, salary
     FROM teachers;
 
 

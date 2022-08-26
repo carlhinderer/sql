@@ -188,7 +188,7 @@ CHAPTER 12 - ADVANCED QUERIES
 - Common Table Expressions
 
     As an alternative to placing subqueries in a FROM clause, we can also create temporary
-      tables for querying using 'CTE (Common Table Expressions'.  CTE is a recent addition to
+      tables for querying using 'CTE (Common Table Expressions)'.  CTE is a recent addition to
       standard SQL, and is informally called a 'WITH clause'.
 
     Using a CTE, you can define one or more tables up front with subqueries.  Then, you can 

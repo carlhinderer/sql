@@ -32,6 +32,7 @@ CHAPTER 3 - DATA TYPES
 
     # Auto-incrementing Integers
     serial
+    bigserial
 
     # Equivalent Fixed-point Types
     numeric(m, n)
