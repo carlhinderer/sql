@@ -1,0 +1,129 @@
+------------------------------------------------------------------
+| RUNNING POSTGRES IN DOCKER                                     |
+------------------------------------------------------------------
+
+- Starting a Postgres Instance
+
+    - To start an instance:
+
+        $ docker run --name some-postgres -e POSTGRES_PASSWORD=mysecretpassword -d postgres
+
+
+    - The default 'postgres' user and database are created in the entrypoint with 'initdb'.
+
+
+
+- initdb
+
+    - The 'initdb' command creates a new Postgres database cluster, which is a collection of databases
+        managed by a single server instance.
+
+
+    - Creating a database cluster consists of:
+
+        1. Creating the directories in which the database data will live
+
+        2. Generating the shared catalog tables (tables that belong to the whole cluster rather than 
+             to any particular database)
+
+        3. Creating the template1 and postgres databases
+
+
+    - When you later create a new database, everything in the 'template1' database is copied. (Therefore, 
+        anything installed in template1 is automatically copied into each database created later.)
+
+
+    - The postgres database is a default database meant for use by users, utilities and third party
+        applications.  It is used primarily to be the default database we connect to when we run 'psql'.
+
+      We can delete it, but then we need to explicitly define which database we want to connect with when
+        we run 'psql'.  Additionally, many third party tools depend on it being there.
+
+
+
+- Starting a Postgres instance via psql
+
+    - To start an instance and get a psql prompt:
+
+        $ docker run -it --rm --network some-network postgres psql -h some-postgres -U postgres
+
+
+
+- Environment Variables
+
+    - The Postgres image uses several environment variables.  The only required one is 'POSTGRES_PASSWORD',
+        the rest are optional.
+
+
+    - Note that Docker-specific variables will only have an effect if you start the container with an
+        empty data directory.  Any pre-existing databases will be left alone on container startup.
+
+
+    - POSTGRES_PASSWORD
+
+        - This sets the superuser password for Postgres.  It is required.  The default superuser is
+            defined by the POSTGRES_USER variable.
+
+        - The PostgreSQL image sets up 'trust' authentication locally so you may notice a password is not
+            required when connecting from localhost (inside the same container). However, a password will 
+            be required if connecting from a different host/container.
+
+
+    - POSTGRES_USER
+
+        - This variable (optional) is used in conjunction with POSTGRES_PASSWORD to set a user and it's
+            password.  It will create a user with superuser power and a database with the same name.
+            If not specified, the default user 'postgres' will be used.
+
+
+    - POSTGRES_DATABASE
+
+        - This variable (optional) can be used to define a different name for the default database that 
+            is created when the image is first started. If it is not specified, then the value of 
+            POSTGRES_USER will be used.
+
+
+
+- Simple Dockerfile
+
+    - Here is a very simple Dockerfile with an initialization script.
+
+        Dockerfile
+        ----------------------------------
+        FROM postgres
+        ENV POSTGRES_PASSWORD pgpassword
+        COPY init-script.sql /docker-entrypoint-initdb.d/
+
+
+
+- Initialization Scripts
+
+    - Note that you can use psql commands (like \c) in the initialization scripts.
+
+        init-script.sql
+        ----------------------------------
+        CREATE DATABASE myappdb;
+        CREATE USER myappuser WITH PASSWORD 'myapppw';
+        GRANT ALL PRIVILEGES ON DATABASE myappdb TO myappuser;
+
+        \c myappdb;
+
+        CREATE TABLE hobbies(
+           hobby_id serial PRIMARY KEY,
+           hobby VARCHAR (255) UNIQUE NOT NULL
+        );
+
+        INSERT INTO hobbies(hobby) VALUES('swimming');
+        INSERT INTO hobbies(hobby) VALUES('diving');
+        INSERT INTO hobbies(hobby) VALUES('jogging');
+        INSERT INTO hobbies(hobby) VALUES('dancing');
+        INSERT INTO hobbies(hobby) VALUES('cooking');
+
+
+
+- Navigating Around in Container
+
+    - To get a psql prompt in the container:
+
+        $ su - postgres
+        $ psql
