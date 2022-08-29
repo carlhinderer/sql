@@ -141,12 +141,12 @@ CHAPTER 15 - NORMALIZATION
 
         After Normalization:
 
-        EP1
+        EP1 (EmployeeProject)
         ----------------------------------------
         Ssn(PK)     Pnumber(PK)     Hours
         ----------------------------------------
 
-        EP2                                EP3
+        EP2 (Employee)                     EP3 (Project)
         -----------------------            -----------------------------------------
         Ssn(PK)     Ename                  Pnumber(PK)     Pname     Plocation
         -----------------------            -----------------------------------------

@@ -1,0 +1,215 @@
+-----------------------------------------------------------------------
+| ER TO RELATIONAL MAPPING ALGORITHM                                  |
+-----------------------------------------------------------------------
+
+- ER to Relational Mapping Algorithm
+
+    1. For each regular/strong entity, create a relation that includes all the simple attributes.
+
+         - Choose 1 of the key attributes as primary.  If the key is composite, the attributes together
+             form the PK.
+
+
+         - Results after this step:
+
+             EMPLOYEE
+             [Fname, Minit, Lname, Ssn(PK), BDate, Address, Sex, Salary]
+
+             DEPARTMENT
+             [Dname, Dnumber(PK)]
+
+             PROJECT
+             [Pnane, Pnumber(PK), Plocation]
+
+
+
+    2. For each weak entity, create a relation with all attributes.  Add an FK with all simple attributes 
+         in the PK of the strong entity.
+
+         - The PK of the new relation is the attributes from the strong entity's PK, along with any
+             partial key attributes of the weak entity.
+
+
+         - Results after this step:
+
+             EMPLOYEE
+             [Fname, Minit, Lname, Ssn(PK), BDate, Address, Sex, Salary]
+
+             DEPARTMENT
+             [Dname, Dnumber(PK)]
+
+             PROJECT
+             [Pnane, Pnumber(PK), Plocation]
+
+             DEPENDENT
+             [Essn(PK,FK), DependentName(PK), Sex, Bdate, Relationship]
+
+
+
+    3. Map the binary 1:1 relationships.
+
+         - 3 Approaches for this:
+
+             1. Foreign Key (Usually appropriate)
+             2. Merged Relation (Possible when both relationships are total)
+             3. Relationship Relation (Rarely used)
+
+
+        - Foreign Key Way:
+
+            - Choose one relation as S, the other as T.  It's better if S has total participation,
+                since this reduces the number of NULL values.
+
+            - Add to S all the simple attributes of the relationship.
+
+            - Add the PK of T as a FK in S.
+
+
+        - Results after this step:
+
+             S is DEPARTMENT
+             T is EMPLOYEE
+
+             EMPLOYEE
+             [Fname, Minit, Lname, Ssn(PK), BDate, Address, Sex, Salary]
+
+             DEPARTMENT
+             [Dname, Dnumber(PK), MgrSsn(FK), MgrStartDate]
+
+
+
+    4. Map the binary 1:N relationships.
+
+        - Add the primary key of the 1-side of the relationship as a foreign key on the n-side.
+
+
+        - Results after this step:
+
+             EMPLOYEE
+             [Fname, Minit, Lname, Ssn(PK), BDate, Address, Sex, Salary, SuperSsn(FK), Dno(FK)]
+
+             DEPARTMENT
+             [Dname, Dnumber(PK), MgrSsn(FK), MgrStartDate]
+
+             PROJECT
+             [Pnane, Pnumber(PK), Plocation, Dno(FK)]
+
+
+
+    5. Map the binary M:N relationships.
+
+        - Create a new relation.  Add the PKs of both relations; the combination will be the PK of the
+            new relation.
+
+
+        - Add any simple attributes of the relationship to the new relation.
+
+
+        - Results of this step:
+
+             EMPLOYEE
+             [Fname, Minit, Lname, Ssn(PK), BDate, Address, Sex, Salary, SuperSsn(FK), Dno(FK)]
+
+             DEPARTMENT
+             [Dname, Dnumber(PK), MgrSsn(FK), MgrStartDate]
+
+             PROJECT
+             [Pnane, Pnumber(PK), Plocation, Dno(FK)]
+
+             WORKS_ON
+             [Essn(PK,FK), Pno(PK,FK), Hours]
+
+             DEPENDENT
+             [Essn(PK,FK), DependentName(PK), Sex, Bdate, Relationship]
+
+
+
+    6. Create a new relation for multivalued attributes.
+
+        - Create a new relation.  Add the PK of the containing relation as an FK in the new relation.
+            Add the multivalued attribute to the new relation.
+
+
+        - The combination of all attributes in the new relation forms the it's PK.
+
+
+        - Results of this step:
+
+             EMPLOYEE
+             [Fname, Minit, Lname, Ssn(PK), BDate, Address, Sex, Salary, SuperSsn(FK), Dno(FK)]
+
+             DEPARTMENT
+             [Dname, Dnumber(PK), MgrSsn(FK), MgrStartDate]
+
+             DEPT_LOCATIONS
+             [Dnumber(PK,FK), Dlocation(PK)]
+
+             PROJECT
+             [Pnane, Pnumber(PK), Plocation, Dno(FK)]
+
+             WORKS_ON
+             [Essn(PK,FK), Pno(PK,FK), Hours]
+
+             DEPENDENT
+             [Essn(PK,FK), DependentName(PK), Sex, Bdate, Relationship]
+
+
+
+- Specialization and Generalization (Step 7)
+
+    - A. Multiple Relations - Subclass and Superclass
+
+        - This usually works, assuming the parent has a unique id.
+
+
+        - Example:
+
+            EMPLOYEE
+            [Ssn(PK), Fname, Minit, Lname, Birth_date, Address, Job_type]
+
+            SECRETARY
+            [Ssn(PK,FK), Typing_speed]
+
+            TECHNICIAN
+            [Ssn(PK,FK), Tgrade]
+
+            ENGINEER
+            [Ssn(PK,FK), Eng_type]
+
+
+
+    - B. Multiple Relations - Subclass Only
+
+        - Should only be used for disjoint
+
+
+        - Example:
+
+            CAR
+            [Vehicle_id(PK), License_plate_no, Price, Max_speed, No_of_passengers]
+
+            TRUCK
+            [Vehicle_id(PK), License_plate_no, Price, No_of_axles, Tonnage]
+
+
+
+    - C. Single Relation with One Type Attribute
+
+        - Only for disjoint, can results in many NULLs
+
+
+        - Example:
+
+            EMPLOYEE
+            [Ssn(PK), Fname, Minit, Lname, Birth_date, Address, Job_type, Typing_speed, Tgrade, Eng_type]
+
+
+
+    - D. Single Relation with Multiple Type Attributes
+
+        - Better for overlapping, could be disjoint
+
+
+        - Example:
+
+            
