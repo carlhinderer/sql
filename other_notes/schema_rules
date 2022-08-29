@@ -1,0 +1,193 @@
+-----------------------------------------------------------------------
+| SCHEMA RULES                                                        |
+-----------------------------------------------------------------------
+
+- 10 Rules for a Better Sql Schema
+
+    1. Only use lowercase letters, numbers, and underscores.
+
+         - Don't use dots, spaces, or dashes in database, schema, table, or column names.
+
+             -- Bad
+             select "user name" from events
+
+             -- Good
+             select user_name from events
+
+
+         - When you have to work with this data all day, it's much easier to remember that everything
+             is lowercase.
+
+
+
+    2. Use simple, descriptive column names.
+
+         - If a 'users' table needs access to a FK in the 'packages' table, name the key 'package_id',
+             rather than 'pkg_fk'.
+
+         
+         - Don't use ambiguous names for polymorphic data.  Instead of creating columns like 'item_type'
+             and 'item_value', you are usually better off using specific names instead.
+
+             -- Bad
+             select sum(item_value) as photo_count
+             from items
+             where item_type = 'Photo Count'
+
+             -- Good
+             select sum(photo_count) from items
+
+
+         - Don't prefix column names with the name of the containing table.  It is not helpful.
+
+
+         - Don't use reserved words like 'column', 'tag', or 'user' as column names.  You'll have to
+             quote them every time you do this, and you'll get confusing error messages.
+
+
+
+    3. Use simple, descriptive tables names.
+
+         - Use underscores to separate words.  Whenever possible, use a single word.
+
+             -- Bad
+             select * from packagedeliveries;
+
+             -- Better
+             select * from package_deliveries;
+
+             -- Good
+             select * from deliveries;
+
+
+         - It is recommended to use pluralized names for tables (ie 'packages') and pluralizing both
+             words in the name of a join table (ie 'packages_users').  This makes queries more readable.
+
+
+
+    4. Have an integer primary key (use an auto-incrementing id)
+
+        - Even if you're using UUIDs or it doesn't make sense (ie for join tables), add the standard id
+            column with an auto-incrementing integer sequence.  This makes certain things, like only
+            selecting the first row in a group, much easier.
+
+            -- Delete duplicated rows
+            delete from my_table
+            where id in (select ...) as duplicated_ids
+
+
+        - Avoid multi-column primary keys.  They can be difficult to reason about and very difficult to
+            change.
+
+          Instead, use an integer PK, a multi-column unique constraint, and several single-column indexes
+            instead.
+
+
+
+    5. Be consistent with Foreign Keys
+
+        - There are many styles for naming Primary and Foreign Keys.  Our recommendation, and the most
+            popular, is to have a PK called 'id' for any table 'foo'.  All foreign keys should be named
+            'foo_id'.
+
+
+        - Be careful with FK's that don't obviously match up to a table.  A column named 'owner_id' might
+            be a FK to a 'users' table, or it might not.  Name the column 'user_id', or if necessary,
+            'owner_user_id'.
+
+
+
+    6. Store Datetimes as Datetimes
+
+        - Don't store Unix timestamps or strings as dates.  Convert them to datetimes instead.  Using
+            SQL date functionsmeans that every query has to convert from a timestamp to a datetime.
+
+            -- Bad
+            select date(from_unixtime(created_at))
+            from packages
+
+            -- Good
+            select date(created_at)
+            from packages
+
+
+        - Don't store the year, month, and day in separate columns.  This will make queries much harder
+            to write.
+
+            -- Bad
+            select date(created_year || '-' 
+              || created_month || '-' 
+              || created_day)
+
+            -- Good
+            select date(created_at)
+
+
+
+    7. UTC, Always UTC
+
+        - Using a timezone other than UTC will cause endless problems.  Great tools have all the
+            functionality you need to convert the data from UTC to your current timezone.
+
+
+        - The database's time zone should be UTC, and all datetime columns should be types that strip
+            time zones.  If your database is not UTC, or if it is a mix of UTC and non-UTC, time series
+            analysis will be much harder.
+
+
+
+    8. Have One Source of Truth
+
+        - There should only ever be one source of truth for a piece of data.  Views and rollups should
+             be labeled as such.
+
+             -- Make it clear
+             select *
+             from daily_usage_rollup
+
+
+        - Don't leave old columns like 'user_id_old' or 'user_id_v2' around, since they will become an
+            endless source of confusion.  Drop abandoned tables and unused columns during regular
+            maintenance.
+
+
+
+    9. Prefer Tall Tables Without JSON Columns
+
+        - Avoid super-wide tables with dozens of columns named 'answer1', 'answer2', 'answer3', etc.
+            Pivot the table into a schema that doesn't have duplicated columns.  It will be much easier
+            to query.
+
+            -- Bad
+            select
+              sum(
+                (case when answer1 is not null then 1 else 0 end) +
+                (case when answer2 is not null then 1 else 0 end) +
+                (case when answer3 is not null then 1 else 0 end)
+              ) as num_answers
+            from surveys
+            where id = 123
+
+            -- Good
+            select count(response)
+            from answers
+            where survey_id = 123
+
+
+
+    10. Don't Over-Normalize
+
+        - Dates, zip codes, and countries don't need their own tables with foreign key lookups.  If you
+            do that, every query ends up with a handful of the same joins.  It creates a lot of extra
+            work for the database.
+
+            -- Bad
+            select dates.d, count(1)
+            from users
+            join dates on users.created_date_id = dates.id
+            group by 1
+
+            -- Good
+            select date(created_at), count(1)
+            from users
+            group by 1

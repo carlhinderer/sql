@@ -212,4 +212,6 @@
 
         - Example:
 
-            
+            PART
+            [Part_no(PK), Description, Mflag, Drawing_no, Manufacture_date, Batch_no, Pflag,
+               Supplier_name, List]
