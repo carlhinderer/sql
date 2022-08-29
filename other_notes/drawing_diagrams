@@ -1,0 +1,11 @@
+-----------------------------------------------------------------------
+| DRAWING DIAGRAMS                                                    |
+-----------------------------------------------------------------------
+
+- Install and Launch draw.io (aka Diagrams.net)
+
+    # Install drawio
+    $ sudo snap install drawio
+
+    # Launch drawio
+    $ drawio
