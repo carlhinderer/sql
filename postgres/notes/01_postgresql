@@ -33,7 +33,7 @@ CHAPTER 1 - POSTGRESQL
     sudo service postgresql start
     sudo service postgresql restart
 
-    # Change postges configuration
+    # Change postgres configuration
     sudo vim /etc/postgresql/9.3/main/postgresql.conf
 
 
