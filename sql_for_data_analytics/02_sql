@@ -1,0 +1,382 @@
+-----------------------------------------------------------------------
+| CHAPTER 2 - THE BASICS OF SQL ANALYTICS                             |
+-----------------------------------------------------------------------
+
+- Postgre Schemas
+
+    - Tables are collected in common collections in databases called schemas.  One or several schemas form
+        a database.
+
+      For instance, the 'products' table can be placed in the 'analytics' schema.  This table can be referred
+        to in queries as 'analytics.products'.
+
+
+    - However, there is a special schema called the 'public' schema.  This is a default schema.  If you do
+        not specifically mention a schema when referring to a table, it is assumed you mean 'public.products'.
+
+
+
+- Tables in the 'sqlda' Database
+
+    closest_dealerships
+      # Contains the distance between each customer and dealership
+
+    countries
+      # An empty table with columns describing countries
+
+    customer_sales
+      # Contains raw data in a semi-structured format of some sales records
+
+    customer_survey
+      # Contains feedback with ratings from the customers
+
+    customers
+      # Contains detailed information for all customers
+
+    dealerships
+      # Contains detailed information for all dealerships
+
+    emails
+      # Contains the details of emails sent to each customer
+
+    products
+      # Contains the products sold by ZoomZoom
+
+    public_transportation_by_zip
+      # Contains the availability measure of public transportation in different zip codes in the US
+
+    sales
+      # Contains the sales records of ZoomZoom on a per customer per product basis
+
+    salespeople
+      # Contains the details of salespeople in all the dealerships
+
+    top_cities_data
+      # Contains some aggregation data for customer counts in different cities
+
+
+
+- The SELECT Statement
+
+    - Simplest Examples
+
+        SELECT product_id, model
+        FROM products;
+
+        SELECT *
+        FROM products;
+
+
+    - Form of SELECT query
+
+        1. Operation (SELECT)
+        2. Data (FROM)
+        3. Condition (WHERE)
+        4. Grouping (GROUP BY)
+        5. Postprocessing (ORDER BY and LIMIT)
+
+
+
+- The WHERE Clause
+
+    - Simplest Example
+
+        SELECT model
+        FROM products
+        WHERE year=2014;
+
+
+    - Using an AND clause
+
+        SELECT model, year, base_msrp 
+        FROM products 
+        WHERE year=2014
+        AND base_msrp<=1000;
+
+
+    - Using an OR clause
+
+        SELECT model, product_type 
+        FROM products 
+        WHERE year=2014
+        OR product_type='automobile';
+
+
+    - Use parentheses with complex boolean conditions to make them more readable
+
+        SELECT * 
+        FROM products 
+        WHERE (year>2016 AND year<2018) 
+        OR product_type='scooter';
+
+
+    - The IN clause can be used for membership
+
+        SELECT model, year 
+        FROM products 
+        WHERE year IN (2014, 2016, 2019);
+
+
+    - The NOT IN clause can be used for negation of membership
+
+        SELECT model, year 
+        FROM products
+        WHERE year NOT IN (2014, 2016, 2019);
+
+
+
+- The ORDER BY Clause
+
+    - Simplest Example (ASC is implicit)
+
+        SELECT model, production_start_date 
+        FROM products 
+        ORDER BY production_start_date;
+
+
+    - Order is DESC instead
+
+        SELECT model, production_start_date 
+        FROM products 
+        ORDER BY production_start_date DESC;
+
+
+    - Instead of writing the name of the column you want to order by, you can refer to the position of
+        that column in the SELECT clause:
+
+        -- Orders by product_id
+        SELECT product_id, model 
+        FROM products 
+        ORDER BY 1;
+
+
+    - To order by multiple columns
+
+        SELECT * 
+        FROM products 
+        ORDER BY year DESC, base_msrp ASC;
+
+
+
+- The LIMIT Clause
+
+    - Sometimes, we only want the first few rows returned:
+
+        SELECT model 
+        FROM products 
+        ORDER BY production_start_date 
+        LIMIT 5;
+
+
+
+- The IS NULL and IS NOT NULL Clause
+
+    - To find the rows for which a column is null
+
+        SELECT *
+        FROM products
+        WHERE production_end_date IS NULL;
+
+
+    - To find the rows for which a column is not null
+
+        SELECT *
+        FROM products
+        WHERE production_end_date IS NOT NULL;
+
+
+
+- Using LIKE
+
+    - For a wildcard search
+
+        SELECT * 
+        FROM salespeople 
+        WHERE first_name LIKE 'Nic%' 
+        AND hire_date >= '2021-01-01' 
+        AND hire_date <= '2021-12-31';
+
+
+
+- Creating Tables
+
+    - The command for creating tables:
+
+        CREATE TABLE {table_name} (
+        {column_name_1} {data_type_1} {column_constraint_1},
+        {column_name_2} {data_type_2} {column_constraint_2},
+        {column_name_3} {data_type_3} {column_constraint_3},
+        ...
+        {column_name_last} {data_type_last} {column_constraint_last}
+        );
+
+
+    - Numeric Types
+
+        smallint     integer             bigint
+        decimal      numeric
+        real         double precision
+        smallserial  serial              bigserial
+
+
+    - Character Types
+
+        character varying(n), varchar(n)
+        character(n), char(n)
+        text
+
+
+    - Boolean Types
+
+        True       # Also accepted: t, true, y, yes, on, 1
+        False      # Also accepted: f, false, n, no, off, 0
+
+
+    - Datetime Types
+
+        timestamp without time zone
+        timestamp with time zone
+        date
+        time without time zone
+        time with time zone
+        interval
+
+
+    - Data Structures
+
+        Arrays
+        ['cat', 'dog', 'horse']
+
+        JSON
+        {'name': 'Bob', 'age': 27, 'city': 'New York'}
+
+
+    - Column Constraints
+
+        NOT NULL
+        UNIQUE
+        PRIMARY KEY
+
+
+    - Simple Example
+
+        CREATE TABLE countries ( 
+          key INT PRIMARY KEY,
+          name text UNIQUE, 
+          founding_year INT, 
+          capital text
+        );
+
+
+    - Creating a table from a SELECT query
+
+        CREATE TABLE products_2014 AS ( 
+          SELECT *
+          FROM products 
+          WHERE year=2014
+        );
+
+        OR
+
+        SELECT * 
+        INTO products_2014
+        FROM products 
+        WHERE year=2014;
+
+
+    - To get the schema of the table we just created, look in the system tables:
+
+        SELECT COLUMN_NAME, DATA_TYPE 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'products_2014';
+
+
+
+- Updating Tables
+
+    - To add a column:
+
+        ALTER TABLE products_2014 
+        ADD COLUMN weight INT;
+
+
+    - To drop a column:
+
+        ALTER TABLE products_2014 
+        DROP COLUMN weight;
+
+
+    - To add a new record:
+
+        INSERT INTO products_2014 ( 
+          product_id, model, year, 
+          product_type, base_msrp,
+          production_start_date, production_end_date
+        )
+        VALUES (
+          13, 'Nimbus 5000', 2014,
+          'scooter', 500.00,
+          '2014-03-03', '2020-03-03'
+        );
+
+
+    - To add a new record using a SELECT query:
+
+        INSERT INTO products_2014( 
+          product_id, model, year, product_type, base_msrp,
+          production_start_date, production_end_date
+        ) 
+        SELECT * 
+        FROM products 
+        WHERE year=2016;
+
+
+    - To update existing rows:
+
+        UPDATE Products_2014 
+        SET base_msrp = 299.99 
+        WHERE product_type = 'scooter' 
+        AND year<2018;
+
+
+    - To update a rows based on their existing value:
+
+        UPDATE Products_2022
+        SET base_msrp = base_msrp*1.10 
+        WHERE model='Model Chi' 
+        AND year=2022;
+
+
+
+- Deleting Data and Tables
+
+    - To delete a single attribute in a row:
+
+        UPDATE customers
+        SET email = NULL 
+        WHERE customer_id=3;
+
+
+    - To delete rows from a table:
+
+        DELETE FROM products_2014 
+        WHERE product_type='scooter';
+
+
+    - To delete all rows in a table, omit the WHERE clause
+
+        DELETE FROM products_2014;
+
+        OR
+
+        TRUNCATE TABLE products_2014;
+
+
+    - To delete a table
+
+        DROP TABLE products_2014;
+
+
+    - To delete a table if it exists:
+
+        DROP TABLE IF EXISTS products_2014;
