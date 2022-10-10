@@ -1,0 +1,410 @@
+-----------------------------------------------------------------------
+| CHAPTER 3 - SQL FOR DATA PREPARATION                                |
+-----------------------------------------------------------------------
+
+- Inner Joins
+
+    - An 'inner join' returns only rows that meet the row predicate (the intersection between the 2 tables).
+
+        SELECT *
+        FROM salespeople
+        INNER JOIN dealerships
+          ON salespeople.dealership_id = dealerships.dealership_id
+        ORDER BY 1;
+
+
+    - To only select the attributes from one table in the relationship:
+
+        SELECT salespeople.*
+        FROM salespeople
+        INNER JOIN dealerships
+          ON dealerships.dealership_id = salespeople.dealership_id
+        WHERE dealerships.state = 'CA'
+        ORDER BY 1;
+
+
+    - It can be useful to alias tables when you're doing joins to save typing:
+
+        SELECT s.*
+        FROM salespeople AS s
+        INNER JOIN dealerships AS d
+          ON d.dealership_id = s.dealership_id
+        WHERE d.state = 'CA'
+        ORDER BY 1;
+
+
+
+- Outer Joins
+
+    - A 'left outer join' returns every row in the left table.  If a row from the right table is not found,
+        a row of NULL is returned.  Either 'LEFT OUTER JOIN' or 'LEFT JOIN' will perform this type of join.
+
+      Note that every row in the left side will be returned in combination with each matching row on the
+        right side.  So if there is a row in the left side that matches 5 rows in the right side in a 1:M
+        relationship, 5 rows for that 1 left row will be returned.
+
+
+    - Example: We want to mail all customers that have not received an email, and we want to do it in
+        1000-customer batches.
+
+        SELECT *
+        FROM customers c
+        LEFT OUTER JOIN emails e 
+          ON c.customer_id = e.customer_id
+        WHERE e.customer_id IS NULL
+        ORDER BY c.customer_id
+        LIMIT 1000;
+
+
+    - A 'right outer join' returns every row in the right table.  If a row from the left table is not found,
+        a row of NULL is returned.  The same M:1 condition holds.
+
+        SELECT *
+        FROM email e
+        RIGHT OUTER JOIN customers c
+          ON e.customer_id = c.customer_id
+        ORDER BY c.customer_id
+        LIMIT 1000;
+
+
+    - A 'full outer join' will return all rows from the left and right tables, regardless of whether the
+        join predicate is matched.  For rows that it is not met, there will be NULL on the other side.
+
+        SELECT *
+        FROM emails e
+        FULL OUTER JOIN customers c
+        ON e.customer_id = c.customer_id;
+
+
+
+- Cross Joins
+
+    - A 'cross join' has no join predicate.  It matches each row from the left table with each row in the
+        right table.
+
+
+    - For example, to return each possible combination of 2 products:
+
+        SELECT p1.product_id, p1.model,
+               p2.product_id, p2.model
+        FROM products p1
+        CROSS JOIN products p2;
+
+
+
+- Example - All customers who have bought a car
+
+    - Here, we want to return all customers who have bought a car and have a valid phone number:
+
+        SELECT c.customer_id, c.first_name, c.last_name, c.phone
+        FROM sales s
+        INNER JOIN customers c
+          ON s.customer_id = c.customer_id
+        INNER JOIN products p
+          ON s.product_id = p.product.id
+        WHERE p.product_type = 'automobile'
+          AND c.phone IS NOT NULL;
+
+
+
+- Subqueries
+
+    - Using subqueries, we can use the results of a SELECT query like we would use a table.
+
+        -- Get all salespeople in California
+        SELECT *
+        FROM salespeople
+        INNER JOIN (
+          SELECT *
+          FROM dealerships
+          WHERE dealer
+        ) d
+          ON d.dealership_id = salespeople.dealership_id
+        ORDER BY 1;
+
+
+    - If your subquery only selects one column, it can also be used with the IN keywork in a WHERE clause.
+
+        SELECT *
+        FROM salespeople
+        WHERE dealership_id IN (
+          SELECT dealership_id FROM dealerships
+          WHERE dealerships.state = 'CA'
+        )
+        ORDER BY 1;
+
+
+
+- Unions
+
+    - Unions are used to keep the same number of columns, but put multiple sets of rows together.
+
+
+    - For example to get a list of customer addresses and dealership addresses:
+
+        (
+          SELECT street_address, city, state, postal_code
+          FROM customers
+          WHERE street_address IS NOT NULL
+        )
+        UNION
+        (
+          SELECT street_address, city, state, postal_code
+          FROM dealerships
+          WHERE street_address IS NOT NULL
+        )
+        ORDER BY 1;
+
+
+    - Note that the subqueries must have the same number of columns and the same datatypes for the columns.
+
+
+    - Also note that the UNION removes all duplicate rows by default.  If you want to retain the duplicate
+        rows, use UNION ALL instead.
+
+
+
+- Example - Party Guest List
+
+    - We want to generate a guest list of all customers and salespeople that live in Los Angeles, CA.
+
+        (
+          SELECT first_name, last_name, 'Customer' as guest_type
+          FROM customers
+          WHERE city='Los Angeles'
+            AND state='CA'
+        )
+        UNION
+        (
+          SELECT first_name, last_name, 'Employee' as guest_type
+          FROM salespeople s
+          INNER JOIN dealerships d 
+            ON d.dealership_id=s.dealership_id
+          WHERE d.city='Los Angeles'
+            AND d.state='CA'
+        );
+
+
+
+- Example - UNION vs UNION ALL
+
+    - Here, we'll just get each of the records in the products table once.
+
+        SELECT * FROM products
+        UNION
+        SELECT * FROM products
+        ORDER BY 1;
+
+
+    - Here, we'll get each of the records in the products table twice.
+
+        SELECT * FROM products
+        UNION ALL
+        SELECT * FROM products
+        ORDER BY 1;
+
+
+
+- Common Table Expressions
+
+    - CTEs are a different version of subqueries.  They establish temporary tables by using the WITH
+        clause.
+
+
+    - Here, we find California-based salespeople using a CTE:
+
+        WITH d as (
+          SELECT * 
+          FROM dealerships
+          WHERE dealerships.state = 'CA'
+        )
+        SELECT *
+        FROM salespeople
+        INNER JOIN d 
+          ON d.dealership_id = salespeople.dealership_id
+        ORDER BY 1;
+
+
+    - One advantage of CTEs is that they can be designed to be recursive.  Recursive CTEs can reference
+        themselves, solving problems other queries cannot.  This is outside the scope of this book, though.
+
+
+
+- The CASE WHEN Function
+
+    - The CASE WHEN function allows a query to map various values in a column to other values.
+
+        SELECT 
+          CASE 
+            WHEN postal_code='33111' THEN 'Elite Customer'
+            WHEN postal_code='33124' THEN 'Premium Customer'
+            ELSE 'Standard Customer' 
+          END AS customer_type,
+        *
+        FROM customers;
+
+
+
+- Example - Use CASE WHEN to get regional links
+
+    - Here, we'll classify our customers by region based on what state they live in.
+
+        SELECT c.customer_id,
+          CASE 
+            WHEN c.state in ('MA', 'NH', 'VT', 'ME', 'CT', 'RI') 
+            THEN 'New England'
+            WHEN c.state in ('GA', 'FL', 'MS', 'AL', 'LA', 'KY', 'VA', 'NC', 'SC', 'TN', 'VI', 'WV', 'AR')
+            THEN 'Southeast'
+            ELSE 'Other' 
+          END as region
+        FROM customers c
+        ORDER BY 1;
+
+
+
+- The COALESCE Function
+
+    - Another common requirement is to replace the NULL values with a standard value.  With the COALESCE
+        function, we can pass in any number of columns and scalar values, and if the first value is NULL,
+        we try to replace it with the second value.
+
+      If COALESCE function will keep running down the list until it hits a non-NULL value.  If all the
+        values are NULL, the function returns NULL.  This is useful for setting a default value.
+
+
+    - Here, if a customer's phone number is missing, we replace the NULL value with 'NO PHONE'
+
+        SELECT first_name, last_name, COALESCE(phone, 'NO PHONE') as phone
+        FROM customers
+        ORDER BY 1;
+
+
+
+- The NULLIF Function
+
+    - The 'NULLIF' function is the opposite of 'COALESCE'.  NULLIF takes 2 values, and will return NULL if
+        the values match.
+
+
+    - Here, if someone has the title 'Honorable', we'll remove it from their name:
+
+        SELECT customer_id, 
+               NULLIF(title, 'Honorable') as title,
+               first_name,
+               last_name,
+               suffix,
+        FROM customers c
+        ORDER BY 1;
+
+
+
+- The LEAST/GREATEST Functions
+
+    - The LEAST function takes any number of values and returns the smallest value.  The GREATEST function
+        takes any number of values and returns the largest.
+
+
+    - Here, we create a list of scooters, where every scooter is $600 or less, for the sales team:
+
+        SELECT product_id, 
+               model,
+               LEAST(600.00, base_msrp) as base_msrp,
+        FROM products
+        WHERE product_type='scooter'
+        ORDER BY 1;
+
+
+
+- The Casting Function
+
+    - Sometimes, we'll have to change the data type of a column within a query.  This is often done to cast
+        a numeric column to TEXT.  The 'column::datetype' format is used to do this.
+
+
+    - Here, we want to change the year (an INTEGER) to a TEXT column:
+
+        SELECT product_id,
+               model,
+               year::TEXT
+        FROM products;
+
+
+    - Note that we will get an error if we try a type cast that is not allowed.
+
+
+
+- The DISTINCT Function
+
+    - We may need to determine the unique values in a column or group of columns.  We use the DISTINCT
+        keyword to do this.
+
+
+    - If we want to know all the unique model years in the 'products' table:
+
+        SELECT DISTINCT year
+        FROM products
+        ORDER BY 1;
+
+
+    - You can also use DISTINCT with multiple columns to get all the distinct combinations:
+
+        SELECT DISTINCT year, product_type
+        FROM products
+        ORDER BY 1, 2;
+
+
+
+- The DISTINCT ON Function
+
+    - The DISTINCT ON function allows you to ensure that only one row is returned, and one or more columns
+        are always unique in the set.
+
+
+    - Here, we want to get a unique list of salespeople, where each salesperson has a unique first name.
+        If there are 2 salespeople with the same first name, it will only return the one that was hired
+        first.
+
+        SELECT DISTINCT ON (first_name) *
+        FROM salespeople
+        ORDER BY first_name, hire_date;
+
+
+
+- Exercise - Build a Sales Model
+
+    - Follow these steps to build a sales model to help predict which customers are the best prospect for
+        remarketing.
+
+        - Use INNER JOIN to join the customers table to the sales table.
+
+        - Use INNER JOIN to join the products table to the sales table.
+
+        - Use LEFT JOIN to join the dealerships table (right table) to the sales table (left table).
+
+        - Return all columns of the customers table and the products table.
+
+        - Return the dealership_id column from the sales table, but fill in dealership_id in sales with 
+            -1 if it is NULL.
+
+        - Add a column called high_savings that returns 1 if the sales amount was 500 less than base_msrp 
+            or lower. Otherwise, it returns 0. Please make sure that you perform the query on a joined 
+            table.
+
+
+    - Here is the query:
+
+        SELECT c.*, 
+               p.*,
+               COALESCE(s.dealership_id, -1),
+               CASE
+                 WHEN (p.base_msrp - sales_amount) >= 500
+                 THEN 1
+                 ELSE 0
+               END AS high_savings
+        FROM customers c
+        JOIN sales s 
+          ON c.customer_id = s.customer_id
+        JOIN products p
+          ON p.product_id = s.product_id
+        LEFT JOIN dealerships d
+          ON s.dealership_id = d.dealership_id;
