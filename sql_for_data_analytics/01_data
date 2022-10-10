@@ -1,0 +1,315 @@
+-----------------------------------------------------------------------
+| CHAPTER 1 - UNDERSTANDING AND DESCRIBING DATA                       |
+-----------------------------------------------------------------------
+
+- Set Up Postgres DB
+
+    1. Run docker-compose with postgres and sqladmin in 'docker/postgres'.
+
+
+    2. Create the db for the book:
+
+         $ docker exec -it localpgdb bash
+
+         # Run as root
+         $ apt update
+         $ apt install wget
+
+         # Switch to postgres user
+         $ su - postgres
+         $ create sqlda
+
+
+    3. Download the data dump for the database:
+
+         $ mkdir downloads
+         $ cd downloads
+
+         $ wget https://github.com/PacktPublishing/SQL-for-Data-Analytics-Third-Edition/raw/main/Datasets/
+              data.dump
+
+
+    4. Import the data dump into the 'sqlda' database.
+
+         $ psql -d sqlda < data.dump
+
+
+
+- Data Analytics and Statistics
+
+    - Definitions
+
+        - Raw data is a group of values you can extract from a source.  It becomes useful when it is
+            processed to find patterns in the data that was extracted.  These patterns, also called
+            'information', help you interpret the data, make predictions, and identify unexpected changes
+            in the future.  This information is then processed into 'knowledge'.
+
+        - 'Knowledge' is a large, ordered collection of persistent and extensive information that can be
+            used to predict phenomena in the real world.
+
+        - 'Data analysis' is the process by which you convert data into information, and then knowledge.
+
+        - 'Data analytics' is when data analysis is combined with making predictions.
+
+        - There are several data analysis techniques available to make sense of data.  One of them is
+            'statistics', which uses mathematical techniques on data.
+
+        - 'Statistics' is the science of collecting and analyzing a large amount of data to identify the
+            characteristics of the data and it's subsets.
+
+        - Statistics is performed on datasets, which include both qualitative and quantitative data.
+
+
+
+- Types of Statistics
+
+    - Statistics can be further divided into 2 categories: Descriptive Statistics and Inferential
+        Statistics.
+
+
+    - 'Descriptive Statistics' are used to describe a collection of data.
+
+        - 'Univariate analysis' is descriptive statistics on a single variable.
+            (ie average age in a country)
+
+        - 'Multivariate analysis' is descriptive statistics on 2 or more variables.
+            (ie interaction between GDP per capita, healthcare spending per capita, and age)
+
+        - 'Bivariate analysis' is descriptive statistics on 2 variables.
+
+
+    - 'Inferential Statistics' allows datasets to be collected as a sample or a small portion of 
+        measurements from a larger group (called a 'population').  Properties of the population are
+        inferred from the properties of a sample.
+
+        - For instance, instead of collecting the ages of 100 million people, we sample 10,000 people and
+            use their average age as the average age of the country.
+
+
+
+- Methods of Descriptive Statistics
+
+    - Univariate Analysis Techniques
+
+        - Data Frequency Distribution
+        - Quantiles
+        - Central Tendancy
+        - Dispersion
+
+
+    - Bivariate Analysis Techniques
+
+        - Scatterplots
+        - Linear Trend Analysis and Pearson Correlation Coefficient
+        - Interpreting and Analyzing the Correlation Coefficient
+        - Time Series Data
+
+
+
+- Data Frequency Distribution
+
+    - The distribution of data is simply the count of the number of values in a dataset.
+
+    - Absolute frequency distribution:
+        700 brown eyes
+        200 green eyes
+        100 blue eyes
+
+    - Relative frequency distribution:
+        70% brown eyes
+        20% green eyes
+        10% blue eyes
+
+    - For a continuous quantitative value with a range of values (ie height), we create interval 'buckets'.
+        < 170
+        170-174.9
+        175-179.9
+        >= 180
+
+    - Plotting data frequency distribution on a graph gives you a histogram.
+
+
+
+- Quantiles
+
+    - One way to numerically quantify data distribution is to use quantiles.  'N-Quantiles' are a set of
+        n-1 points used to divide a dataset into n groups based on a variable.
+
+        Quartiles = 4 groups
+        Qunitiles = 5 groups
+
+
+
+- Central Tendency
+
+    - The 'central tendency' is the typical value of a variable.
+
+    - The 'mode' is the value that comes up most often.  This tends to be useful when a variable can take
+        on a small, fixed number of values.
+
+    - The 'average/mean' is the value calculated by summing all the data points, then dividing by the 
+        number of points.  It is generally a good description, but is sensitive to outliers.
+
+    - When a dataset has an outlier, it is called a 'skewed dataset'.  Some common reasons for outliers
+        include unclean data, rare events, and problems with measurement instruments.
+
+    - The 'median' (aka the '2nd quartile' or '50th percentile') is the middle value.  For an even amount
+        of data points, take the average of the middle 2.
+
+
+
+- Dispersion
+
+    - 'Dispersion' is the property of how close together data points are in a variable.  There are many
+        ways to measure dispersion.
+
+    - The 'range' is the difference between the highest and lowest numbers for a variable.
+
+    - The 'variance' is the average of the squared difference between each data point and the mean.
+
+    - The 'standard deviation' is the square root of the variance.
+
+
+    - Note that there are 2 different formulas for standard deviation, one for populations and one for
+        samples.  The difference between them becomes small when there are several data points.
+
+        Population Std Dev           Sample Std Dev
+        
+          spqt(sum(xi-ux)**2)          spqt(sum(xi-ux)**2)
+          -------------------          -------------------
+                 n                             n - 1
+
+
+    - The 'IQR (Interquartile Range)' is the difference between Q1 and Q3.  This is more robust to outliers.
+        In fact, it is often used to calculate outliers:
+
+        < (Q1 - 1.5 * IQR)     is an outlier
+        > (Q3 + 1.5 * IQR)     is an outlier
+
+
+
+- Scatterplots
+
+    - Scatterplots are one of the most effective ways to conduct bivariate analysis is using scatterplots.
+        Graphs are incredibly helpful for finding patterns.  Just as histograms can help you understand
+        one variable, scatterplots can help you understand 2 variables.
+
+
+    - Common shapes found in trends include:
+
+        - Linear
+        - Quadratic
+        - Power
+        - Inverse
+        - Logistic
+
+
+    - The process of approximating a trend with a mathematical function is called 'regression analysis'.
+
+    - Another pattern that people tend to look for is 'periodicity', repeating patterns in the data.  The
+        temperature is a common example: it always goes up during the day and down at night.
+
+    - Scatterplots are also useful for detecting outliers, which appear far away from the rest of the
+        data.
+
+
+
+- Linear Trend Analysis & Pearson Correlation Coefficient
+
+    - Linear trends are commonly found when analyzing bivariate data.  One method for quantifying linear
+        correlation is to use the Peason correlation coefficient (commonly denoted 'r').  It ranges from
+        -1 to 1, indicating how well a scatterplot fits a linear trend.
+
+
+        r =                sum((x_i - x_mean)(y_i - y_mean))
+               -----------------------------------------------------------
+                 sqrt(sum(x_i - x_mean)**2) * sqrt(sum(y_i - y_mean)**2)
+
+
+
+    - The higher the absolute value of a Pearson correlation coefficient, the more likely it is that the
+        points will fit a straight line:
+
+        -1.0 <= r <= -0.7       Very strong negative correlation
+        -0.7 <= r <= -0.4       Strong negative correlation
+        -0.4 <= r <= -0.2       Moderate negative correlation
+        -0.2 <= r <=  0.2       Weak to Non-existent correlation
+         0.2 <= r <=  0.4       Moderate positive correlation
+         0.4 <= r <=  0.7       Strong positive correlation
+         0.7 <= r <=  1.0       Very strong positive correlation
+
+
+    - Note that when using the Pearson coefficient, we should watch out for nonlinear trends.  We should
+        also take the results with a grain of salt of n < 30.
+
+    - Always remember that correlation doesn't equal causation.  Just because x and y rise together, it
+        doesn't mean that x causes y.  There may be a third factor responsible for the association.
+
+
+
+- Time Series Data
+
+    - A 'time series' is a bivariate relationship where the x-axis variable is time.
+
+    - Date and time information is quantitative in nature.  Time series are important in organizations
+        because they can be indicative of when specific changes happened.
+
+
+
+- Working with Missing Data
+
+    - Missing values are one of the many problems you have to deal when working with datasets.  Some of the
+        strategies used to deal with this are:
+
+        1. Delete rows with missing data (if there are a small number of rows, perhaps < 5%)
+
+        2. Fill in the missing data with the mean/median/mode (if 5-25% of rows are missing data)
+
+        3. Regression imputation (may be able to build a model to fill in missing values)
+
+        4. Delete variables with lots of missing values
+
+
+
+- Statistical Significance Testing
+
+    - Often, an analyst is interested in comparing the statistical properties of 2 groups.  For instance,
+        a company may want to use marketing A/B tests, where 2 different versions of a web page are shown
+        to users.
+
+      You may find that method A results in 10% more clicks than method B.  But does that mean that method
+        A is 10% better?  Or is this just a result of day-to-day testing?
+
+
+    - 'Statistical significance testing' is the method of determining whether the data you have supports
+        a given hypothesis.
+
+        1. Define the test statistic you are examining.
+
+        2. Formulate a null hypothesis, which is the idea that the results observed are the product of
+             chance.
+
+        3. Then, you need an alternative hypothesis, which is the idea that the results cannot be explained
+             by chance alone.
+
+        4. Finally, a test requires a significance level, which is the value that the test statistic needs
+             to take to confirm the alternative hypothesis.
+
+
+
+- Common Statistical Significance Tests
+
+    - A 'two-sample Z-test' is for determining whether the average of the two samples is different.  This
+        test assumes both samples are drawn from a normal distribution with a known population standard
+        deviation.
+
+
+    - A 'two-sample T-test' is for determining whether the average of the two samples is different, either
+        when the sample set is too small (n < 30) or the population standard deviation is unknown.  The
+        2 samples are also generally drawn from distributions assumed to be normal.
+
+
+    - A 'Pearson's Chi-squared test' is for determining whether the distribution of data points to
+        categories is different than would be expected due to chance.  This is the primary test for 
+        determining whether the proportions in tests, such as those in an A/B test, are beyond what would 
+        be expected from chance.
