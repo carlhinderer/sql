@@ -1,0 +1,66 @@
+
+1. Report the first name, last name, city, and state of each person in the Person table. If the address 
+     of a personId is not present in the Address table, report null instead.
+
+     https://leetcode.com/problems/combine-two-tables/
+
+     SELECT firstName, lastName, city, state
+     FROM Person
+     LEFT JOIN Address
+     ON Person.personId = Address.personId;
+
+
+2. Write an SQL query to find the employees who earn more than their managers.
+
+   (https://leetcode.com/problems/employees-earning-more-than-their-managers/)
+
+   SELECT e.name AS Employee
+   FROM Employee e
+   JOIN Employee m
+   ON e.managerId = m.id
+   WHERE e.salary > m.salary;
+
+
+3. Write an SQL query to report all the duplicate emails.
+
+   (https://leetcode.com/problems/duplicate-emails/)
+
+   SELECT email AS Email
+   FROM Person
+   GROUP BY email
+   HAVING count(*) > 1;
+
+
+4. Write an SQL query to report all customers who never order anything.
+
+   (https://leetcode.com/problems/customers-who-never-order/)
+
+   SELECT name as Customers
+   FROM Customers
+   WHERE id NOT IN (SELECT customerId FROM Orders);
+
+
+5. Delete all the duplicate emails, keeping only one unique email with the smallest id.
+
+   (https://leetcode.com/problems/delete-duplicate-emails/)
+
+   -- Right Answer in Normal SQL
+   DELETE
+   FROM Person
+   WHERE id NOT IN (
+       SELECT min(id)
+       FROM Person
+       GROUP BY email
+   );
+
+   -- You have to do this in MySQL, since you can't use same relation in nested query
+   DELETE FROM Person
+   WHERE ID NOT IN (
+       SELECT * FROM
+       (SELECT MIN(id)
+       FROM Person
+       GROUP BY email) AS Person2
+   );
+
+   More Info:
+   https://www.sqlshack.com/different-ways-to-sql-delete-duplicate-rows-from-a-sql-table/
