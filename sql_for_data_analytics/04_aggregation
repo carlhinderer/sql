@@ -1,0 +1,548 @@
+-----------------------------------------------------------------------
+| CHAPTER 4 - AGGREGATE FUNCTIONS FOR DATA ANALYSIS                   |
+-----------------------------------------------------------------------
+
+- Aggregate Functions
+
+    - In addition to seeing individual rows of data, it is also often useful to understand the properties of
+        an entire column or table.  Calculations on large groups of rows are known as 'aggregate functions'.
+
+
+    - The major aggregate functions used in SQL:
+
+        COUNT(columnX)                 # Number of rows in columnX that have a non-NULL value
+
+        COUNT(*)                       # Number of rows in the output table
+
+
+        MIN(columnX)                   # Minimum value or first alphabetical value in columnX
+
+        MAX(columnX)                   # Maximum value in columnX
+
+        SUM(columnX)                   # Sum of all values in columnX
+
+        AVG(columnX)                   # Average of all values in columnX
+
+        STDDEV(columnX)                # Sample standard deviation of all values in columnX
+
+        VAR(columnX)                   # Sample variance of all values in columnX
+
+
+        REGR_SLOPE(colX, colY)         # Slope of linear regression for colX, colY
+
+        REGR_INTERCEPT(colX, colY)     # Intercept of linear regression for colX, colY
+
+        CORR(colX, colY)               # Pearson coefficient between colX and colY
+
+
+    - To count the number of customers who live in California:
+
+        SELECT COUNT(*)
+        FROM customers
+        WHERE state='CA';
+
+
+    - You can do arithmetic with aggregate functions:
+
+        SELECT COUNT(*)/2 
+        FROM customers;
+
+
+    - You can use aggregate function with each other in mathematical ways:
+
+        SELECT SUM(base_msrp)/COUNT(*) AS avg_base_msrp 
+        FROM Products;
+
+
+    - To determine how many distinct values there are in a column:
+
+        SELECT COUNT(DISTINCT state)
+        FROM customers;
+
+
+    - To get the average number of customers per state (need cast to get float division):
+
+        SELECT COUNT(customer_id)::numeric / COUNT(DISTINCT state)
+        FROM customers;
+
+        OR
+
+        SELECT COUNT(customer_id) * 1.0 / COUNT(DISTINCT state) 
+        FROM customers;
+
+
+
+- Example - Using Aggregate Functions to Analyze Data
+
+    - We want to calculage the lowest price, highest price, average price, and standard deviation of all the
+        products the company has ever sold.
+
+        SELECT 
+          MIN(base_msrp), 
+          MAX(base_msrp), 
+          AVG(base_msrp), 
+          STDDEV(base_msrp)
+        FROM products;
+
+
+
+- Aggregate Functions with the GROUP BY Clause
+
+    - Instead of aggregating all the rows in a table, we may want to aggregate values for smaller groups in
+        the table.  
+
+
+    - The GROUP BY statement has the following structure:
+
+        SELECT 
+          {KEY}, 
+          {AGGFUNC(column1)} 
+        FROM 
+          {table1} 
+        GROUP BY 
+          {KEY}
+
+
+    - To get the number of customers in each state:
+
+        SELECT state, COUNT(*) 
+        FROM customers 
+        GROUP BY state;
+
+
+    - The grouping is a 2-step process:
+
+        1. First, SQL will create groups based on the existing states, one group for each states, labeling
+             the group with the state.  SQL will then allocate customers into different groups based on
+             their states.
+
+        2. Then, SQL will apply the aggregate function to each group, and associate the result with their
+             group label.
+
+
+    - The {key} value for the GROUP BY operation can also be a function of a column(s).  Here, we count
+        customers based on the year they were added to the database:
+
+        SELECT 
+          TO_CHAR(date_added, 'YYYY'), 
+          COUNT(*) 
+        FROM 
+          customers 
+        GROUP BY 
+          TO_CHAR(date_added, 'YYYY')
+        ORDER BY 
+          1;
+
+
+    - You can use a column number to perform a GROUP BY operation:
+
+        SELECT 
+          state, 
+          COUNT(*) 
+        FROM   
+          customers
+        GROUP BY   
+          1;
+
+
+    - To return the data in alphabetical order:
+
+        SELECT 
+          state, 
+          COUNT(*) 
+        FROM  
+          customers 
+        GROUP BY 
+          state 
+        ORDER BY 
+          state;
+
+        OR
+
+        SELECT 
+          state, 
+          COUNT(*) 
+        FROM 
+          customers 
+        GROUP BY 
+          1
+        ORDER BY 
+          1;
+
+
+    - Often, instead of ordering by key, you may want to order the aggregates themselves.  To order by 
+        the counts:
+
+        SELECT 
+          state, 
+          COUNT(*) 
+        FROM 
+          customers 
+        GROUP BY 
+          state 
+        ORDER BY 
+          COUNT(*);
+
+
+    - You may want to count only a subset of the data.  To get the total counts of male customers in each
+        state:
+
+        SELECT 
+          state, COUNT(*) 
+        FROM 
+          customers 
+        WHERE 
+          gender='M' 
+        GROUP BY 
+          state 
+        ORDER BY 
+          State;
+
+
+
+- Multiple-Column GROUP BY
+
+    - You can also use GROUP BY on multiple columns.  For instance, say you want to get a count of how
+        many male and female customers there are in each state.
+
+        SELECT 
+          state, gender, COUNT(*) 
+        FROM 
+          customers 
+        GROUP BY 
+          state, gender 
+        ORDER BY 
+          state, gender;
+
+
+      The results you get will look like:
+
+        state     gender      count
+        ----------------------------
+        AK        F           101
+        AK        M           87
+        AL        F           433
+        AL        M           489
+
+
+    - Any number of columns can be used in a GROUP BY statement in this same way.  SQL will create one group
+        for each unique combination of column values, then calculate the aggregation function for each
+        group.
+
+
+
+- Example - Calculating the Cost by Product Type
+
+    - Here, we find the minimum, maximum, average, and standard deviation of price for each product type.
+
+        SELECT
+          product_type,
+          MIN(base_msrp),
+          MAX(base_msrp),
+          AVG(base_msrp),
+          STDDEV(base_msrp)
+        FROM
+          products
+        GROUP BY
+          1
+        ORDER BY
+          1;
+
+
+
+- Grouping Sets
+
+    - It is very common to want to see the statistical characteristics of a dataset from several different
+        perspectives.  For instance, you want to see the total number of customers in each state, and you
+        also want to see the total number of male and female customers in each state.
+
+
+    - One way to accomplish this would be to use UNION ALL:
+
+        (
+          SELECT 
+            state, 
+            NULL as gender, 
+            COUNT(*)
+          FROM 
+            customers
+          GROUP BY 
+            1, 2
+          ORDER BY 
+            1, 2
+        )
+        UNION ALL
+        (
+          SELECT 
+            state, 
+            gender, 
+            COUNT(*)
+          FROM 
+            customers
+          GROUP BY 
+            1, 2
+          ORDER BY 
+            1, 2
+        )
+        ORDER BY 1, 2;
+
+
+      The results for this query look like:
+
+        state      gender       count
+        ----------------------------------
+        AK         F            101
+        AK         M            87
+        AK         (null)       188
+
+
+    - Fundamentally, what you are doing is creating multiple sets of aggregation (one grouped by state and
+        one grouped by state and gender), the joining them together.  Thus, this operation is called
+        'grouping sets'.
+
+
+    - An alternative way to do this is to use the GROUPING SETS keyword, which is much more concise.
+
+        SELECT 
+          state, 
+          gender, 
+          COUNT(*)
+        FROM 
+          customers
+        GROUP BY GROUPING SETS (
+          (state),
+          (state, gender)
+        )
+        ORDER BY 
+          1, 2;
+
+
+
+- Ordered Set Aggregates
+
+    - Up until this point, none of the aggregates we have used depend on the order of the data.  However,
+        there are a few aggregate statistics that do depend on the order.  To calculate these use cases,
+        SQL has a series of functions called 'ordered set aggregates'.
+
+
+    - The main ordered set aggregates are:
+
+        mode()          
+
+          # Returns the value that appears most often,  In case of a tie, the first value in the order is 
+          #   returned
+
+        Percentile_cont(fraction)
+
+          # Returns a value corresponding to the specified fraction in the ordering, interpolating
+          #   between adjacent input items if needed
+
+        Percentile_disc(fraction)
+
+          # Returns the first input value whose position in the ordering equals or exceeds the specified
+          #   fraction
+
+
+    - The format for these functions is:
+
+        SELECT 
+          {ordered_set_function} WITHIN GROUP (ORDER BY {order_column})
+        FROM {table};
+
+
+    - To calculate the median price of the products table:
+
+        SELECT
+          PERCENTILE_CONT(0.5)
+          WITHIN GROUP (ORDER BY base_msrp)
+          AS median
+        FROM
+          products;
+
+
+
+- Aggregate Functions with the HAVING Clause
+
+    - The WHERE clause is used to filter by condition on the original dataset.  However, GROUP BY is a 
+        2-step process: grouping then aggregating.  This is why you can't use the WHERE clause to filter
+        out the aggregations.
+
+      In order to filter on aggregate functions, you must use the HAVING clause.  It is specifically 
+        designed for GROUP BY queries.  It applies the filter condition on the aggregated groups instead
+        of the original dataset.
+
+
+    - A GROUP BY operation with a HAVING statement has this structure:
+
+        SELECT 
+          {KEY},
+          {AGGFUNC(column1)}
+        FROM 
+          {table1}
+        GROUP BY 
+          {KEY}
+        HAVING 
+          {OTHER_AGGFUNC(column2)_CONDITION}
+
+
+    - Here, we get the customer count by states with at least 1000 customers:
+
+        SELECT 
+          state, COUNT(*)
+        FROM 
+          customers
+        GROUP BY 
+          state
+        HAVING 
+          COUNT(*)>=1000
+        ORDER BY 
+          state;
+
+
+
+- Finding Missing Values Using GROUP BY
+
+    - The GROUP BY statement can be useful in determining how much data is missing in a column.  The
+        query to do this has the following structure:
+
+        SELECT 
+          SUM(
+        CASE 
+          WHEN 
+            {column1} IS NULL 
+              OR 
+            {column1} IN ({missing_values}) 
+              THEN 1 
+              ELSE 0 
+        END
+          )::FLOAT/COUNT(*)
+        FROM 
+          {table1}
+
+
+    - For example, to find the proportion of customers with a missing 'state' value:
+
+        SELECT 
+          SUM(
+        CASE 
+          WHEN state IS NULL OR state IN ('') THEN 1 
+              ELSE 0 
+        END
+          )::FLOAT/COUNT(*) AS missing_state
+        FROM 
+          customers;
+
+
+    - To get both the proportion of present values and missing values for the 'state' column:
+
+        SELECT 
+          COUNT(state) * 1.0 / COUNT(*) AS non_null_state,
+          1 - COUNT(state) * 1.0 / COUNT(*) AS null_state
+        FROM 
+          customers;
+
+
+
+- Measuring Data Uniqueness with Aggregates
+
+    - Another common task is to determine if every value in a column is unique.  In some cases, a PRIMARY
+        KEY constraint might not be set.
+
+
+    - To find out whether each customer record has a unique 'customer_id':
+
+        SELECT 
+          COUNT(DISTINCT customer_id)=COUNT(*) AS equal_ids
+        FROM 
+          customers;
+
+
+
+- Activity - Analyzing Sales Data Using Aggregate Functions
+
+    - The executives want to gain some insight into common statistical categories of sales.
+
+        1. Calculate the total number of unit sales the company has made.
+
+             SELECT COUNT(*) FROM sales;
+
+
+        2. Calculate the total sales amount in dollars for each state.
+
+             SELECT 
+               c.state,
+               SUM(s.sales_amount)::DECIMAL(12, 2)
+             FROM
+               sales s
+             JOIN customers c
+               ON c.customer_id = s.customer_id
+             GROUP BY c.state
+             ORDER BY c.state;
+
+
+        3. Identify the top five best dealerships in terms of the most units sold (ignore internet sales).
+
+             SELECT 
+               d.dealership_id, 
+               COUNT(*)
+             FROM dealerships d
+             JOIN sales s
+               ON d.dealership_id = s.dealership_id
+             WHERE s.channel != 'internet'
+             GROUP BY d.dealership_id
+             ORDER BY COUNT(*) DESC
+             LIMIT 5;
+
+
+        4. Calculate the average sales amount for each channel, as shown in the sales table, and look at 
+             the average sales amount, first by channel sales, then by product_id, and then both together.
+
+             SELECT channel,  product_id, AVG(sales_amount)
+             FROM sales
+             GROUP BY grouping sets (
+               (channel),
+               (product_id),
+               (channel, product_id)
+             );
+
+
+        5. Calculate the percentage of sales transactions that have a NULL dealership.
+
+             SELECT 1 - (COUNT(dealership_id) * 1.0 / COUNT(*))
+             FROM sales;
+
+
+        6. Calculate the percentage of internet sales the company has made for each year. Order the year 
+             in a timely fashion and you will get time series data. Does this time series suggest 
+             something?
+
+             -- Sum of internet sales each year
+             SELECT 
+               TO_CHAR(sales_transaction_date, 'yyyy') as sales_year, 
+               SUM(sales_amount)
+             FROM sales
+             WHERE channel = 'internet'
+             GROUP BY sales_year
+             ORDER BY sales_year;
+
+             -- Total of internet sales and non-internet sales each year
+             SELECT 
+               TO_CHAR(sales_transaction_date, 'yyyy'), 
+               SUM(CASE WHEN channel = 'internet' THEN sales_amount ELSE 0 END) AS internet_sales,
+               SUM(CASE WHEN channel <> 'internet' THEN sales_amount ELSE 0 END) AS non_internet_sales,
+             FROM sales
+             GROUP BY 1 
+             ORDER BY 1;
+
+             -- Percentage of internet sales by year
+             SELECT sales_year, 
+                    ((internet_sales * 1.0) / (internet_sales + non_internet_sales) * 100) AS percent_internet_sales
+             FROM (
+               SELECT 
+                 TO_CHAR(sales_transaction_date, 'yyyy') AS sales_year, 
+                 SUM(CASE WHEN channel = 'internet' THEN sales_amount ELSE 0 END) AS internet_sales,
+                 SUM(CASE WHEN channel != 'internet' THEN sales_amount ELSE 0 END) AS non_internet_sales
+               FROM sales
+               GROUP BY 1 
+               ORDER BY 1
+            ) sales_by_channel;
