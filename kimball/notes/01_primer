@@ -18,8 +18,9 @@
              - Optimized for queries over thousands of transactions
 
 
-    - Some DW/BI systems are just copies of the operational data stored on a separate hardware
-        platform.  These are not typically useful, though.
+    - DW/BI systems have very different needs from operational systems.  DW/BI systems that just copy the
+        operational systems address the need to isolate analytics for performance reasons, but users will
+        be underwhelmed by their usability and performance.
 
 
 
@@ -105,11 +106,6 @@
 
         1. Deliver information that is understandable to business users
         2. Deliver fast query performance
-
-
-    - An executive might describe their business as "We sell products in various markets and
-        measure our performance over time."  It is natural to think of this business as a 
-        cube of data, with edges labeled Product, Market, and Time.
 
 
     - Operational systems use 3NF and ERDs to remove redundancy.  This is so that an insert or
@@ -289,7 +285,7 @@
         10                Shiny 32 oz                  Clean Fast            Glass Cleaner
 
 
-    - The 'fact' and 'dimension' terminology originated from a joiont study conducted by General
+    - The 'fact' and 'dimension' terminology originated from a joint study conducted by General
         Mills and Dartmouth University in the 1960s.
 
 
@@ -304,6 +300,10 @@
         tables, then attack the fact table all at once with the Cartesian product of the dimension
         table keys satisfying the user's constraints.  This requires only a single pass through
         the fact table's index.
+
+
+    - Dimension attributes supply the report filtering and labeling, whereas the fact tables supply the
+        report's numeric values.
 
 
     - We can easily imagine creating BI reports using simple SQL queries:
@@ -361,9 +361,9 @@
 
         - Area where data is organized, stored, and made available for user queries and BI apps
         - Data should be in dimensional models, either star schemas or OLAP cubes
-        - Must contain detailed, atomic data for ad hoc queries
+        - Must contain detailed, atomic data for ad hoc queries (not just summary data)
         - Should be structured around business process measurement events
-        - Dimensional structures must use common, conformed dimensions
+        - Dimensional structures must use common, conformed dimensions across different departments
 
 
     - BI Applications
@@ -387,6 +387,7 @@
         - Analytic data deployed on a departmental basis without worrying about sharing across enterprise
         - Data is in silos, this is not recommended, but is prevalent in industry
         - Path of least resistence, due to how funds are distributed, but wasteful in long run
+        - Data from different marts is difficult to combine due to different rules and labeling
 
 
     - Hub-and-Spoke Corporate Information Factory (Inmon Architecture)
@@ -405,6 +406,7 @@
         - Data should be granular to allow for ad hoc queries.
         - Atomic data can handle changes easily.
         - Summary data should complement the atomic data.
+        - Also, we can store any amount of historical data in dimensional models.
 
 
     - Dimensional models are departmental, not enterprise.
@@ -422,3 +424,9 @@
 
         - Dimensional models should not be designed by focusing on predefined reports or analyses.
         - We want to keep the data atomic so that any future report can be generated.
+
+
+    - Dimensional models can't be integrated.
+
+        - Dimensional models can be integrated if they conform to the enterprise data warehouse bus
+        - Conformed dimensions are built and maintained in the ETL system
