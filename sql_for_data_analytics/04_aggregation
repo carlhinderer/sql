@@ -536,7 +536,8 @@
 
              -- Percentage of internet sales by year
              SELECT sales_year, 
-                    ((internet_sales * 1.0) / (internet_sales + non_internet_sales) * 100) AS percent_internet_sales
+                    ((internet_sales * 1.0) / (internet_sales + non_internet_sales) * 100) 
+                      AS percent_internet_sales
              FROM (
                SELECT 
                  TO_CHAR(sales_transaction_date, 'yyyy') AS sales_year, 

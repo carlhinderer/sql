@@ -1,0 +1,603 @@
+-----------------------------------------------------------------------
+| CHAPTER 5 - WINDOW FUNCTIONS FOR DATA ANALYSIS                      |
+-----------------------------------------------------------------------
+
+- Background
+
+    - In Chapter 3, we learned about functions like CASE WHEN, COALESCE, and NULLIF.  These functions
+        receive data for a single row and produce a result for this row.  They depend only on the data in
+        the row.
+
+
+    - In Chapter 4, we learned about aggregation functions like SUM, AVG, and COUNT.  These functions
+        receive data from a dataset of multiple rows and produce a result for this dataset.
+
+
+    - Sometimes, you may also want to know the characteristics of a data point in regard to its position in
+        the dataset.  For instance, rank is determined both the by measurements of the row and the dataset
+        it is in.  A baby's height and weight will have different ranks in the dataset for the whole country
+        and the dataset for the city.
+
+
+    - Within each dataset, there may be subgroups, called 'partitions', the the rank is based on.  For
+        example, ranking in different states requires dividing the dataset into multiple partitions, based
+        on the state.  Ranking is then calculuated inside each partition.
+
+
+    - Within the partition, the rows related to the calculation are selected to calculate the result.  These
+        selected rows form a 'window'.
+
+
+    - Essentially, what you want to achieve is that given a dataset, you want a result for each row.  This
+        result is defined based on the value of the row, the window on which it is applied, and the dataset
+        itself.  A function used to perform this type of calculation is called a 'window function'.
+
+
+
+- Window Functions
+
+    - Let's say we want to rank all customers, based on when they became a customer:
+
+        SELECT 
+          customer_id, first_name, last_name, date_added
+        FROM 
+          customers
+        ORDER BY 
+          date_added;
+
+
+    - If we run the above query and assign each customer a rank, the problem is that customers that were
+        added on the same day will be each given a different rank, arbitrarily.  To count how many
+        customers were added each day:
+
+        SELECT 
+          date_added, COUNT(*)
+        FROM 
+          customers
+        GROUP BY 
+          date_added
+        ORDER BY 
+          date_added;
+
+      We could use a query like this to get the customers from each day manually and assign each of them
+        the same rank.  This is manual and tedious though.  Window functions can take multiple rows of data
+        and process them, but still retain all the information in the rows.
+
+
+
+- The Basics of Window Functions
+
+    - The syntax of a window function looks like:
+
+        SELECT {columns},
+          {window_func} OVER (PARTITION BY {partition_key} ORDER BY {order_key})
+        FROM table1;
+
+
+    - All aggregate functions can actually be used as window functions.  For instance, this query just adds
+        the total number of customers to each customer row:
+
+        SELECT 
+          customer_id, 
+          first_name, 
+          last_name, 
+          gender,
+          COUNT(*) OVER () as total_customers
+        FROM 
+          customers
+        ORDER BY 
+          customer_id;
+
+
+      Results:
+
+        customer_id     first_name     last_name     gender     total_customers
+        --------------------------------------------------------------------------
+        1               Arlene         Rivles        F          50000
+        2               Braden         Jordan        M          50000
+
+
+    - Now, if we add a PARTITION BY clause to this query, we'll get the 'total_customers' count based on
+        the partition column:
+
+        SELECT
+          customer_id,
+          first_name,
+          last_name,
+          gender,
+          COUNT(*) OVER (PARTITION BY gender) as total_customers
+        FROM 
+          customers
+        ORDER BY 
+          customer_id;
+
+
+      Results:
+
+        customer_id     first_name     last_name     gender     total_customers
+        --------------------------------------------------------------------------
+        1               Arlene         Rivles        F          25044
+        2               Braden         Jordan        M          24956
+
+
+    - As we can see above, when we use 'PARTITION BY gender', SQL divides the dataset into multiple
+        partitions based on the unique value of the gender column.  Inside each partition, SQL calculates
+        the total count.
+
+      We can confirm the gender counts with this query:
+
+        SELECT 
+          gender, 
+          COUNT(*)
+        FROM 
+          customers
+        GROUP BY 
+          1;
+
+
+    - Now, what happens if we use an ORDER BY instead of a PARTITION BY?
+
+        SELECT 
+          customer_id,
+          first_name,
+          last_name,
+          gender,
+          COUNT(*) OVER (ORDER BY customer_id) as total_customers
+        FROM 
+          customers
+        ORDER BY 
+          customer_id;
+
+
+      Results:
+
+        customer_id     first_name     last_name     gender     total_customers
+        --------------------------------------------------------------------------
+        1               Arlene         Rivles        F          1
+        2               Braden         Jordan        M          2
+        3               Jessica        Nussen        F          3
+
+
+    - How Window Functions Work
+
+        - In this case, we just get a running count for the total customers.  This is where the 'window' in
+            window functions come from.  Since we did not specify a PARTITION BY, the full dataset is used 
+            for the calculation.
+
+        - Within this dataset, if ORDER BY is not specified, it is assumed that there is only one window, 
+            the entire dataset.
+
+        - However, when ORDER BY is specified, the rows in the dataset are ordered according to it.  For 
+            each unique value in the order, SQL forms a value group, which contains all the rows containing 
+            this value.  The query then creates a window for each value group.  The window will contain
+            all the rows in this value group and all rows that are ordered before this value group.
+
+        - In this case, the dataset is ordered using 'customer_id' (the PK), so each row has a unique value
+            and forms a value group.  The first value forms its own window.  The second value group contains
+            the second row and the first row, and so on.  Each value group has it's window.
+
+        - Each window is COUNTed, so we get the total count of rows in each window in 'total_customers'.
+
+
+    - Now, we'll see what happens when we use both PARTITION BY and ORDER BY:
+
+        SELECT 
+          customer_id, 
+          first_name, 
+          last_name, 
+          gender,
+          COUNT(*) OVER (PARTITION BY gender ORDER BY customer_id) as total_customers
+        FROM 
+          customers
+        ORDER BY 
+          customer_id;
+
+
+      Results:
+
+        customer_id     first_name     last_name     gender     total_customers
+        --------------------------------------------------------------------------
+        1               Arlene         Rivles        F          1
+        2               Braden         Jordan        M          1
+        3               Jessica        Nussen        F          2
+        4               Barbara        Gowlett       F          3
+
+
+    - Here, the PARTITION divides the dataset into 2 groups based on the value in the 'gender' column.
+        Each partition is then the basis for doing a count, with each partition having it's own set
+        of value groups.
+
+      These value groups are ordered inside the partition, windows are created based on the value groups
+        and their orders, and the window function is applied to the values.  The results are finally
+        assigned to every row in the value groups.
+
+
+
+- Exercise - Analyzing Customer Data Fill Rates Over Time
+
+    - To measure customer engagement, we want to find out how willing people are to fill out all fields
+        on the customer form, especially their address.  We want to find a running total of how many users
+        have filled in their street address over time.
+
+
+    - First, we'll write a query that will return customer information and how many people have filled out
+        their street address.  We'll order the list by date the customer was added.
+
+        SELECT 
+          customer_id, 
+          street_address, 
+          date_added::DATE,
+          COUNT(
+            CASE 
+              WHEN street_address IS NOT NULL THEN customer_id 
+              ELSE NULL 
+            END
+          ) OVER (ORDER BY date_added::DATE) 
+            as non_null_street_address,
+          COUNT(*) OVER (ORDER BY date_added::DATE) 
+            as total_street_address
+        FROM 
+          customers
+        ORDER BY 
+          date_added;
+
+
+      Results:
+
+        customer_id     street_address     date_added     non_null_street_address    total_street_address
+        --------------------------------------------------------------------------------------------------
+        17099           123 Main St        2012-11-09     10                         11
+        30046           61 Duck Crossing   2012-11-09     10                         11
+        6173            353 Iowa Rd        2012-11-09     10                         11
+        ...
+        7486            943 Cody Trail     2012-11-10     22                         24
+        42776           6010 Cary Dr       2012-11-10     22                         24
+
+
+    - We have every customer address ordered by signup date.  We also have 2 columns with the number of
+        customers with non-null addresses and the total number of customer addresses for each rolling
+        day.
+
+      We'll now rewrite this query to compute the rolling average.
+
+        WITH 
+          daily_rolling_count as (
+            SELECT 
+              customer_id, 
+              street_address, 
+              date_added::DATE,
+              COUNT(
+                CASE 
+                  WHEN street_address IS NOT NULL THEN customer_id 
+                  ELSE NULL 
+                END
+              ) OVER (ORDER BY date_added::DATE) 
+                as non_null_street_address,
+              COUNT(*) OVER (ORDER BY date_added::DATE) 
+                as total_street_address
+            FROM 
+              customers
+          )
+        SELECT DISTINCT
+          date_added,
+          non_null_street_address,
+          total_street_address,
+          1 - 1.0 * non_null_street_address/total_street_address AS null_address_percentage 
+        FROM
+          daily_rolling_count
+        ORDER BY
+          date_added;
+
+
+      Results:
+
+        date_added     non_null_street_address     total_street_address     null_address_percentage
+        --------------------------------------------------------------------------------------------
+        2012-11-09     10                          11                       0.090909
+        2012-11-10     22                          24                       0.083333
+        2012-11-11     33                          36                       0.083333
+        2012-11-12     50                          55                       0.090909
+
+
+
+- The WINDOW Keyword
+
+    - Now that we understand the basics of window functions, we'll introduce a syntax that makes it easier
+        to write them.  In many scenarios, our analysis involves running multiple functions against the
+        same window so that you can compare them side by side, usually in the same query.
+
+
+    - For instance, maybe we want a running total number of customers, as well as the running total number
+        of customers with a title, using the same partition based on gender.
+
+        SELECT 
+          customer_id, 
+          title, 
+          first_name, 
+          last_name, 
+          gender,
+          COUNT(*) OVER (PARTITION BY gender ORDER BY customer_id) as total_customers,
+          SUM(CASE WHEN title IS NOT NULL THEN 1 ELSE 0 END) OVER (
+           PARTITION BY gender ORDER BY customer_id
+          ) as total_customers_title
+        FROM customers
+        ORDER BY customer_id;
+
+
+    - It can be tedious to write the same window (PARTITION BY gender ORDER BY customer_id) over and over
+        again.  To simplify this, we can use the WINDOW keyword.
+
+        SELECT 
+          customer_id, 
+          title, 
+          first_name, 
+          last_name, 
+          gender,
+          COUNT(*) OVER w as total_customers,
+          SUM(
+            CASE 
+              WHEN title IS NOT NULL THEN 1 
+              ELSE 0 
+            END
+          ) OVER w as total_customers_title
+        FROM 
+          customers
+        WINDOW w AS (
+          PARTITION BY gender ORDER BY customer_id
+        )
+        ORDER BY customer_id;
+
+
+
+- Statistics with Window Functions
+
+    - Now that we understand how window functions work, we can start using them to calculate useful
+        statistics, such as ranks, percentiles, and rolling statistics.
+
+
+    - In addition to all the aggregate functions, which can be used as window functions, we also have
+        these useful functions:
+
+        ROW_NUMBER         # Number of the current row in it's partition starting from 1
+
+        DENSE_RANK         # Rank the current row in it's partition without gaps
+
+        RANK               # Rank the current row in it's partition with gaps
+
+        LAG                # Return a value evaluated at the row that is at a specified physical offset
+                           #   before the current row within the partition
+
+        LEAD               # Return a value evaluated at the row that is offset rows after the current row
+                           #   in the partition
+
+        NTILE              # Divide rows in a partition as equally as possible and assign each row an 
+                           #   integer starting from 1 to the argument value
+
+
+    - Normally, a call to any of these functions inside a SQL statement would be followed by the OVER
+        keyword.  This will then be followed by PARTITION BY and/or ORDER BY.
+
+      For example, the ROW NUMBER() function looks like:
+
+        ROW_NUMBER() OVER(
+          PARTITION BY column_1, column_2
+          ORDER BY column_3, column_4
+        )
+
+
+
+- Exercise - Rank Order of Hiring
+
+    - We want to have a marketing campaign for our most tenured customers in different states.  We need a
+        query that will rank the customers according to their 'date_added' for each state.
+
+        SELECT 
+          customer_id, 
+          first_name, 
+          last_name, 
+          state, 
+          date_added::DATE,
+          RANK() OVER (
+            PARTITION BY state ORDER BY date_added
+          ) AS cust_rank
+        FROM 
+          customers
+        ORDER BY
+          state, cust_rank;
+
+
+
+- Window Frame
+
+    - As we said before, a window is a set for each value group, which encompasses all rows from the first
+        to the current row in the partition.  However, this is the default, and can be adjusted using the
+        'window frame' clause.
+
+
+    - A window frame clause looks like:
+
+        SELECT 
+          {columns},
+          {window_func} OVER (
+            PARTITION BY {partition_key} 
+            ORDER BY {order_key} 
+            {rangeorrows} BETWEEN {frame_start} AND {frame_end}
+          )
+        FROM 
+          {table1};
+
+
+    - These are the values that {frame_start} and {frame_end} can take:
+
+        UNBOUNDED PRECEDING        # Used for {frame_start}, refers to the first record in the partition
+
+        {offset} PRECEDING         # Refers to {offset} rows or ranges before the current row
+
+        CURRENT ROW                # Refers to the current row
+
+        {offset} FOLLOWING         # Refers to {offset} rows or ranges after the current row
+
+        UNBOUNDED FOLLOWING        # Used for {frame_end}, refers to the last record in the partition
+
+
+    - One useful statistic that can be calculated is the rolling average, which is the average for a
+        statistic in a given time window.  For instance, to calculate the 7-day rolling average of sales
+        over time:
+
+        WITH 
+          daily_sales as (
+            SELECT 
+              sales_transaction_date::DATE,
+              SUM(sales_amount) as total_sales
+            FROM sales
+            GROUP BY 1
+          ),
+          moving_average_calculation_7 AS (
+            SELECT 
+              sales_transaction_date, 
+              total_sales,
+              AVG(total_sales) OVER (
+                ORDER BY sales_transaction_date 
+                ROWS BETWEEN 6 PRECEDING and CURRENT ROW
+              ) AS sales_moving_average_7,
+              ROW_NUMBER() OVER (
+                ORDER BY sales_transaction_date
+              ) as row_number
+            FROM 
+              daily_sales
+            ORDER BY 1
+          )
+        SELECT 
+          sales_transaction_date,
+          CASE 
+            WHEN row_number>=7 THEN sales_moving_average_7 
+            ELSE NULL 
+          END AS sales_moving_average_7
+        FROM 
+          moving_average_calculation_7;
+
+
+
+- Exercise - Team Lunch Motivation
+
+    - We want to buy lunch for all salespeople every time they beat the figure for the best daily total
+        earnings achieved over the past 30 days.  We need a query that produces the total sales in dollars
+        for a current day and target the salespeople must beat for the day, starting from January 1, 2019.
+
+        WITH 
+          daily_sales as (
+            SELECT 
+              sales_transaction_date::DATE,
+              SUM(sales_amount) as total_sales
+            FROM 
+              sales
+            GROUP BY
+              1
+          ),
+          sales_stats_30 AS (
+            SELECT 
+              sales_transaction_date, 
+              total_sales,
+              MAX(total_sales) OVER (
+                ORDER BY sales_transaction_date 
+                ROWS BETWEEN 30 PRECEDING and 1 PRECEDING
+              ) AS max_sales_30
+            FROM 
+              daily_sales
+            ORDER BY
+              1
+          )
+        SELECT 
+          sales_transaction_date, 
+          total_sales,
+          max_sales_30
+        FROM 
+          sales_stats_30
+        WHERE
+          sales_transaction_date>='2019-01-01';
+
+
+
+- Activity - Analyzing Sales Using Window Frames and Window Functions
+
+    - We'll use window functions and window frames to gain insight into sales data.  
+
+
+    - First, we calculate the total sales amount by day for all the days in 2021.
+
+        SELECT 
+          sales_transaction_date::date, 
+          SUM(sales_amount) sales_amount
+        FROM 
+          sales
+        WHERE
+          sales_transaction_date::date BETWEEN '20210101' AND '20211231'
+        GROUP BY
+          sales_transaction_date::date;
+
+
+    - Next, calculate the 30-day rolling average for the daily total sales amount:
+
+        WITH 
+          daily_sales as (
+            SELECT 
+              sales_transaction_date::date, 
+              SUM(sales_amount) sales_amount
+            FROM 
+              sales
+            WHERE
+              sales_transaction_date::date BETWEEN '20210101' AND '20211231'
+            GROUP BY
+              sales_transaction_date::date
+          )
+        SELECT
+          sales_transaction_date,
+          sales_amount,
+          AVG(sales_amount) OVER w AS moving_avg
+        FROM 
+          daily_sales 
+        WINDOW w AS (
+          ORDER BY sales_transaction_date 
+          ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING
+        )
+        ORDER BY 1;
+
+
+    - Finally, we'll calculate which decile each date would be in compared to other days based on their
+        daily 30-day rolling sales amount:
+
+        WITH 
+          daily_sales as (
+            SELECT 
+              sales_transaction_date::date, 
+              SUM(sales_amount) sales_amount
+            FROM 
+              sales
+            WHERE
+              sales_transaction_date::date BETWEEN '20210101' AND '20211231'
+            GROUP BY
+              sales_transaction_date::date
+          ),
+          moving_avg AS (
+            SELECT
+              sales_transaction_date,
+              sales_amount,
+              AVG(sales_amount) OVER w AS moving_avg
+            FROM 
+              daily_sales 
+            WINDOW w AS (
+              ORDER BY sales_transaction_date 
+              ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING
+            )
+          )
+        SELECT
+          sales_transaction_date,
+          sales_amount,
+          moving_avg,
+          NTILE(10) OVER (ORDER BY moving_avg DESC) AS decile
+        FROM 
+          moving_avg m
+        WHERE 
+          moving_avg IS NOT NULL
+        ORDER BY 
+          decile;
