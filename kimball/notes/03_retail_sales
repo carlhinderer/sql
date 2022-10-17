@@ -1,0 +1,764 @@
+-----------------------------------------------------------------------
+|  CHAPTER 3 - RETAIL SALES                                           |
+-----------------------------------------------------------------------
+
+- 4-Step Dimensional Design Process
+
+    - Step 1 - Select the Business Process
+
+        - A 'business process' is a low-level activity performed by an organization, such as:
+
+            - taking orders
+            - invoicing
+            - receiving payments
+            - handling service calls
+            - registering students
+            - performing a medical procedure
+            - processing claims
+
+
+        - To identify an organization's business processes:
+
+            - usually represented as action verbs
+            - typically supported by an operational system
+            - capture key performance metrics
+            - triggered by an input and result in output metrics
+
+
+    - Step 2 - Declare the Grain
+
+        - Here, we must specify exactly what an individual fact table row represents.  Examples include:
+
+            - One row per scan of an individual product on a customer's sales transaction
+            - One row per line item on a bill from a doctor
+            - One row per individual boarding pass scanned at an airport gate
+            - One row per daily snapshot of the inventory items for each item in a warehouse
+            - One row per bank account each month
+
+
+        - We should represent the grain in business terms, and resist the urge to express the grain in 
+            primary key terms.
+
+
+    - Step 3 - Identify the Dimensions
+
+        - Dimensions answer the who, what, where, when, why, and how of the fact table rows.
+
+        - Common examples include date, product, customer, employee, and facility.  With the choice of each
+            dimension, you then list all the discrete, text-like attributes that flesh out each dimension
+            table.
+
+
+    - Step 4 - Identify the Facts
+
+        - Facts are determined by asking what the process is measuring.  All facts in a single fact table 
+            should be at the same grain.  Facts with a different grain should be in a different fact table.
+
+        - You must talk to business experts to determine these decisions.  Do not try to determine them by
+            looking at the data alone.
+
+
+
+- Retail Case Study
+
+    - We have a grocery chain with 100 stores spread across 5 states.  Each store has a full complement of
+        departments, like grocery, frozen foods, dairy, meat, produce, bakery, floral, and health/beauty.
+
+
+    - Each store has about 60,000 products called SKUs (stock keeping units) on it's shelves.
+
+
+    - Data is collected at several places in the store.  The POS system scans barcodes at the cash register,
+        measuring consumer takeaway at the front door.  Other data is captured at the store's back door where
+        vendors make deliveries.
+
+
+    - Management is concerned with the logistics or ordering, stocking, and selling products while
+        maximizing profit.  The profit comes from charging as much as possible for each product, while at
+        the same time attracting as many customers as possible in a highly competitive environment.
+
+
+    - Some of the most significant management decisions have to do with pricing and promotions.  These
+        include:
+
+        - Temporary price reductions
+        - Ads in newspapers
+        - Displays in the grocery store
+        - Coupons
+
+
+    - Step 1 - Select the Business Process
+
+        - The business process we will monitor is customer purchases captured by the POS system.  The data
+            enables the business users to analyze which products are selling at which stores on which days
+            under which promotional conditions with which transactions.
+
+
+    - Step 2 - Declare the Grain
+
+        - Tackling the data at its lowest atomic grain makes sense since it makes it easy to determine the
+            dimensions.  It also allows for maximum analytic flexibility.
+
+        - The most granular data in our study is an individual product on a POS transaction, assuming the
+            POS system rolls up all sales for a given product in a shopping cart into a single line item.
+
+
+    - Step 3 - Identify the Dimensions
+
+        - The Product and the Transaction fall out immediately as dimensions.  The Date, the Store, the
+            Promotion under which the product is sold, and the Cashier and potentially the  Method of Payment 
+            are also clear.
+
+        - Note that a dimensions should never cause additional fact table rows to be generated.
+
+
+    - Step 4 - Identify the Facts
+
+        - The facts collected by the POS system include:
+
+           - sales quantity
+           - per unit regular, discount, and net paid prices
+           - extended discount (quantity * unit discount amount)
+           - sales dollar amounts (quantity * net unit price)
+
+
+        - Some sophsiticated POS systems also provide a standard dollar cost for the product as delivered
+            to the store by the vendor.  With this, you can also calculate the dollar profit.
+
+
+
+                                    Retail Sales Fact
+                                    ------------------------
+                                    Date Key (FK)
+        Date Dimension----------    Product Key (FK)            ----------Product Dimension
+                                    Store Key (FK)
+        Store Dimension---------    Promotion Key (FK)          ----------Promotion Dimension
+                                    Cashier Key (FK)
+        Cashier Dimension-------    Payment Method Key (FK)     ----------Payment Method Dimension
+                                    POS Transaction # (DD)
+                                    Sales Quantity
+                                    Regular Unit Price
+                                    Discount Unit Price
+                                    Net Unit Price
+                                    Extended Discount Dollar Amount
+                                    Extended Sales Dollar Amount
+                                    Extended Cost Dollar Amount
+                                    Extended Gross Profit Dollar Amount
+
+
+
+- Derived Facts
+
+    - The gross profit can be computed by subtracting the extend cost dollar amount from the extended sales
+        dollar amount (or revenue).  We store this derived fact physically, since computing it in the ETL
+        process eliminates the possibility of user calculation errors.
+
+
+    - The cost of a user incorrectly representing gross profit overwhelms the minor incremental storage
+        cost.  You could calculate in a view instead, as long as users can't get around the view with
+        ad hoc queries.
+
+
+
+- Non-Additive Facts
+
+    - Gross margin can be calculated by dividing the gross profit by the extended sales dollar revenue.
+        Gross margin is a 'non-additive fact' because it can't be summarized along any dimension.
+
+
+    - Percentages and ratios are non-additive.  The numerator and denominator should be stored in the fact
+        table.  The ratio can then be calculated in a BI tool for any slice of the fact table by 
+        remembering to calculate the ratio of the sums, not the sum of the ratios.
+
+
+    - Unit price is another non-additive fact.  Summing unit price among any of the dimensions results in
+        a meaningless, non-sensical number.  
+
+      For example, you sell one widget for $1 and sell 4 widgets for 50 cents each.  You could sum sales
+        quantity to determine 5 widgets were sold.  You could sum dollar amounts to get a total sales amount
+        of $3.  But you can't sum unit prices to declare the total unit price is $1.50.
+
+      The properly weighted unit price is calculated by taking $3/5 units = 60 cents average unit price.
+
+
+    - We often don't store non-additive facts in fact tables, since they have limited analytic value.
+        Sometimes, we may get a fundamentally non-additive fact (ie temperature) from the source system
+        that we will store.  In this case, we understand it is non-additive.
+
+
+
+- Transaction Fact Tables
+
+    - Transactional business processes are the most common.  The fact tables representing these processes
+        share several characteristics:
+
+        - The grain of atomic fact tables can be expressed in the context of transaction (ie one row per line)
+        - Often sparsely populated (we don't sell every product in every cart)
+        - Can be enormous (billions or trillions of rows)
+        - Tend to be highly dimensional
+        - Metrics are typically additive
+
+
+    - At this point, it is often helpful to estimate the number of rows you will get in your fact table.
+        We could do this by getting the number of transactions per month, and average number of unique
+        items per transaction.
+
+
+
+- Date Dimension
+
+    - The Date Dimension is in virtually every dimensional model since every business process captures a
+        time series of performance metrics.
+
+
+    - This dimension is so standard, you can usually build it up in advance.  You can put 10-20 years 
+        worth of history, as well as several years into the future.  Even 20 years is only 7300 rows, which
+        is a relatively small dimension table.
+
+            Date Dimension
+            ----------------------------
+            Date Key (PK)
+            Date
+            Full Date Description
+            Day of Week
+            Day Number in Calendar Month
+            Day Number in Calendar Year
+            Day Number in Fiscal Month
+            Day Number in Fiscal Year
+            Last Day in Month Indicator
+            Calendar Week Ending Date
+            Calendar Week Number in Year
+            Calendar Month Name
+            Calendar Month Number in Year
+            Calendar Year-Month (YYYY-MM)
+            Calendar Quarter
+            Calendar Year-Quarter
+            Calendar Year
+            Fiscal Week
+            Fiscal Week Number in Year
+            Fiscal Month
+            Fiscal Month Number in Year
+            Fiscal Year-Month
+            Fiscal Quarter
+            Fiscal Year-Quarter
+            Fiscal Half Year
+            Fiscal Year
+            Holiday Indicator
+            Weekday Indicator
+            SQL Date Stamp
+
+
+    - All the integers in the table support simple date arithmetic across year and month boundaries.
+
+         Date Key                    20130101
+         Date                        01/01/2013
+         Full Date Description       January 1, 2013
+         Day of Week                 Tuesday
+         Calendar Month              January
+         Calendar Quarter            Q1
+         Calendar Year               2013
+         Fiscal Year-Month           F2013-01
+         Holiday Indicator           Holiday
+         Weekday Indicator           Weekday
+
+
+    - Flags and Indicators as Textual Attributes
+
+        - Like many operational flags and indicators, the date dimension's holiday indicator has 2 potential
+            values: 'Holiday' and 'Non-holiday'.  This indicator should be populated with meaningful values,
+            rather than Y/N, 1/0, or True/False.
+
+        - Similarly, a weekday indicator should be 'Weekday' or 'Weekend'.
+
+
+    - Current and Relative Date Attributes
+
+        - Most date dimensions are not subject to updates.  However, there are attributes you can add that
+            will change over time, such as 'IsCurrentDay' or 'IsCurrentMonth'.
+
+        - Some date dimensions have lag days, with 0 for day, -1 for yesterday, +1 for tomorrow, etc.
+            This attribute could also be computed rather than physically stored.
+
+
+    - Time-of-Day as a Dimension or Fact
+
+        - Time of day is usually separated from the date dimension to avoid a row explosion.  If you had
+            a row for each second, you'd have 31 million rows per year.
+
+        - If you wanted to filter or roll up time periods based on summarized day part groupings, like
+            15-minute intervals, hours, lunch hour, or prime times, time-of-day would be treated as a 
+            full-fledged dimension table with one row per time period.
+
+        - If there is no need to roll up or filter on time of day groupings, time-of-day should be handled
+            as a simple datetime fact in the fact table.
+
+
+
+- Product Dimension
+
+    - The product dimension describes every SKU in the grocery store.  Although a grocery store might stock
+        60,000 SKUs, when you account for historical products that are no longer available, the product
+        dimension might have 300,000+ rows.
+
+
+    - The product dimension is almost always sourced from the operational product master file.  Most
+        retailers administer it at HQ and download a subset to each store's POS system at frequent
+        intervals.
+
+
+    - Flatten Many-to-One Hierarchies
+
+        - The product dimension represents many descriptive attributes of each SKU.  Typically, individual
+            SKUs roll up into brands, brands roll up into categories, and categories roll up into
+            departments.
+
+            Product Key                   1
+            Product Description           Baked Well Light Sourdough Fresh Bread
+            Brand Description             Baked Well
+            Subcategory Description       Fresh
+            Category Description          Bread
+            Department Description        Bakery
+            Fat Content                   Reduced Fat
+
+
+        - Some attributes, such as the SKU, are unique.  On the other end, there are only 50 distinct
+            values for department.  You do not need to separate these repeated values into a second
+            normalized table to save space.
+
+
+            Product Dimension
+            -----------------------------
+            Product Key (PK)
+            SKU Number (NK)
+            Product Description
+            Brand Description
+            Subcategory Description
+            Category Description
+            Department Number
+            Department Description
+            Package Type Description
+            Package Size
+            Fat Content
+            Diet Type
+            Weight
+            Weight Unit of Measure
+            Storage Type
+            Shelf Life Type
+            Shelf Width
+            Shelf Height
+            Shelf Depth
+            ...
+
+
+    - Attributes with Embedded Meaning
+
+        - Often, operational product codes such as SKU (identified with the NK natural key notation) have
+            embedded meaning, with different parts of the code representing significant characteristics of
+            the product.
+
+        - In this case, the multipart attribute should be both preserved in it's entirety, and broken
+            down into component parts as separate attributes.  For example, if characters 5-9 identify
+            the manufacturer, that manufacturer name should be another dimension table attribute.
+
+
+    - Numeric Values as Attributes or Facts
+
+        - Sometimes, we'll encounter numeric values that don't clearly fall into the fact or dimension
+            attribute categories.  The standard list price for a product is a classic example.  It's 
+            numeric, but typically changes infrequently.
+
+        - If the numeric value is used for calculation purposes, it likely belongs in the fact table.  If
+            it used mostly for filtering and grouping, it should be treated as a product dimension
+            attribute.  If it is used for both, it should be stored in both fact and dimension tables.
+
+
+    - Drilling Down on Dimension Attributes
+
+        - 'Drilling down' means adding row header attributes from the dimensional tables in a report.
+
+        - For instance, let's say you have a simple report summarizing the sales dollar amount by 
+            department.  If you want to drill down, you can drag any other attribute, such as brand,
+            from the product dimension into the report next to department.
+
+        - 'Drilling up' means removing headers.  For instance, remove brands to only look at sales by
+            department.
+
+        - The product dimension is a common dimension in many dimensional models.  We should fill this
+            dimension with as many descriptive attributes as possible.
+
+
+
+- Store Dimension
+
+    - The store dimension describes every store in the grocery chain.  Unlike the product master file,
+        there might not be a single list available for this, and we may have to cobble it together.
+
+
+    - Multiple Hierarchies in Dimension Tables
+
+        - The store dimension is this case study's primary geographic dimension.  Each store can be
+            thought of as a location.  You can roll up stores to zip code, county, and state.
+
+        - Stores are also likely to roll up an internal organization hierarchy consisting of store
+            districts and regions.  These 2 different store hierarchies are both easily represented in
+            the dimension.
+
+
+            Store Dimension
+            ----------------------
+            Store Key (PK)
+            Store Number (NK)
+            Store Name
+            Store Street Address
+            Store City
+            Store County
+            Store City-State
+            Store State
+            Store Zip Code
+            Store Manager
+            Store District
+            Store Region
+            Floor Plan Type
+            Photo Processing Type
+            Financial Service Type
+            Selling Square Footage
+            Total Square Footage
+            First Open Date
+            Last Remodel Date
+
+
+        - The floor plan type, photo processing type, and finance services type are short text descriptors.
+            They should not be one-character codes, but should make sense when viewed in a report.
+
+        - The column describing square footage is numerical, and should therefore be additive across
+            stores.
+
+
+    - Dates Within Dimension Tables
+
+        - The first open date and last remodel date could be date type columns.  However, if users want
+            to group and filter based on them, they can be join keys to the Date Dimension table.
+
+
+
+- Promotion Dimension
+
+    - The promotion dimension describes the promotion condition under which a product is sold.  This
+        dimension is often called a 'causal dimension' because it describes factors thought to cause a
+        change in product sales.
+
+
+    - Business analysts are interested in whether a promotion is effective.  Promotions are judged based on
+        one or more of these factors:
+
+        - Whether products under promotion received a gain in sales, called a 'lift'
+        - Whether products showed a drop in sales just before or after a promotion ('time shifting')
+        - Whether the products showed a gain but other products nearby were 'cannibalized'
+        - Whether all the products in a promoted category showed a gain ('market growth')
+        - Whether the promotion was profitable, taking into account cost, time shifting, and cannibalization
+
+
+    - Discounts and coupons are typically tracked at the POS system, but other promotions such as in-store
+        displays may have to be linked from other sources.
+
+
+    - The various possible causal conditions are highly correlated.  For instance, a temporary price
+        reduction is usually associated with an ad and perhaps an end aisle display.  For this reason, it
+        makes sense to create one row in the promotion dimension for each combination of promotion
+        conditions that occurs.
+
+      For example, in a given promotion, most of the stores would run all 3 promotion mechanisms
+        simultaneously, but a few stores may not deploy the end aisle displays.  In this case, 2 separate
+        promotion condition rows would be needed.  
+
+
+        Promotion Dimension
+        -----------------------------
+        Promotion Key (PK)
+        Promotion Code
+        Promotion Name
+        Price Reduction Type
+        Promotion Media Type
+        Ad Type
+        Display Type
+        Coupon Type
+        Ad Media Name
+        Display Provider
+        Promotion Cost
+        Promotion Begin Date
+        Promotion End Date
+
+
+    - Whether or not it makes sense to store the dimensions separately or combined is based on whether the
+        business users think of these mechanisms separately.
+
+
+
+- Null Foreign Keys, Attributes, and Facts
+
+    - Most items in the fact tables will not have any promotion attached.  To handle this, the Promotion
+        Dimension must include a row, with a unique key such as 0 or -1, to identify that no promotion
+        was applied to the item.  Referential integrity is violated if you put a null in a fact table that
+        that is declared as a FK to a dimension table.
+
+
+    - We sometimes encounter nulls as dimension attribute values.  These usually result when a given
+        dimension row has not been fully populated, or when there are attributes that are not applicable
+        to all the dimension's rows.
+
+      In either case, we recommend substituting a descriptive string such as 'Unknown' or 'Not Applicable'
+        in place of the null value.  Null values disappear in pull-down menus, and it takes special logic
+        to identify them.
+
+
+    - Finally, we can also encounter nulls as metrics in the fact table.  We generally leave these null,
+        so that they're properly handled in aggregate functions such as SUM, MIN, MAX, COUNT, and AVG,
+        which do the right thing with nulls.  Substituting a 0 would skew these aggregated calculations.
+
+
+
+- Other Retail Sales Dimensions
+
+    - Any descriptive attribute that takes on a single value in the presence of a fact table measurement
+        event is a good candidate to be added to an existing dimension or be it's own dimension.
+
+
+    - For example, there is a cashier identified for each transaction.  The corresponding cashier 
+        dimension would probably have a small subset of non-private attributes.
+
+      Also, we'll likely have a 'No Cashier' row for transactions that are processed through self-service
+        registers.
+
+
+    - The Payment Method case is trickier.  A customer could use multiple payment methods for a single
+        transaction.  In this case, we would likely capture the payment method in a separate fact table
+        with a granularity of one row per payment method per transaction.
+
+
+
+- Degenerate Dimensions for Transaction Numbers
+
+    - The retail sales fact table includes the POS transaction number on every line item row.  Even though
+        we have already separated all information into separate dimensions, the transaction number is 
+        still useful because it is the grouping key for getting all the products purchased in a single
+        transaction.
+
+
+    - Although it looks like a dimension key, all the descriptive items have already been scraped off, so
+        the resulting dimension would be empty.  So, we refer to is as a 'degenerate dimension'.  This
+        is very common when the fact table represents a single transaction or transaction line.  Order
+        numbers, invoice numbers, etc. all appear as degenerate dimensions.
+
+
+    - DDs often play an integral role in the fact table's PK.  In our study, the PK of the retail sales 
+        fact table is the POS transaction # and product key, assuming scans of identical products in
+        a transaction are grouped together as a single line item.
+
+
+
+- Retail Schema in Action
+
+    - The complete retail sales dimensional model is located at 'diagrams/ch03/retail_sales_schema'.
+
+
+
+- Retail Schema Extensibility
+
+    - Several years after we roll out this schema, the retailer wants to add a 'Frequent Shopper' program.
+        Rather than knowing an unidentified shopper purchased 26 items in a transaction, now we know the
+        identity of the shopper.
+
+
+    - To implement this, we'd create a new dimension for the frequent shopper and add another foreign key
+        in the fact table.  We'd also need to create a 'Default Shopper' key for the historical fact table
+        rows.  We'd also want a 'Frequent Shopper Not Identified' row for customers who don't use a
+        Frequent Shopper card with their purchase.
+
+
+    - Since our original model was at the default grain, it is easy to gracefully evolve our schema.  None
+        of the existing BI applications need to be modified.  We can handle:
+
+        - New dimension attribute
+            - Add the new columns as new attributes in the dimension tables
+            - Create a 'Not Available' option to populate the old rows
+
+        - New dimensions
+            - Add a new dimension to an existing fact table by adding a new FK
+
+        - New measured facts
+            - If new measured facts become available, add them to the fact table
+            - If new facts are at a different grain, a new fact table should be created
+
+
+
+- Factless Fact Tables
+
+    - One thing we don't know is which products went on promotion, but didn't sell.  There are no fact table
+        rows for that.
+
+
+    - We could make a Promotion Coverage fact table, with one row per product on promotion in a store each
+        day.  This is known as a 'factless fact table', because it has no measurements.  It merely 
+        captures the relationship between the involved keys.
+
+
+        Promotion Coverage Facts
+        ------------------------------
+        Date Key (FK)
+        Product Key (FK)
+        Store Key (FK)
+        Promotion Key (FK)
+        Promotion Count (=1)
+
+
+    - To determine what products were on promotion, but didn't sell:
+
+        - Query the Promotion Coverage fact table to determine what products were on promotion on a given
+            day.
+
+        - The determine what products sold from the POS sales fact table.
+
+        - Take the set difference between these 2 lists of products.
+
+
+    - This question would be easier to answer using an OLAP cube, since it contains empty cells for
+        nonbehavior.
+
+
+
+- Dimension Table Surrogate Keys
+
+    - The unique PK of a dimension table should be a surrogate key, rather than relying on a natural key.
+        These keys have no business significance, they merely serve to join the dimension tables to the
+        fact table.
+
+
+    - We should use surrogate keys because:
+
+        - They enable the DW team to maintain control of the environment (natural keys might get reused)
+        - Integrate multiple source systems (even if natural keys are inconsistent)
+        - Improve performance (since they're just an integer)
+        - Handle null conditions (in case natural key is not known)
+        - Support dimension attribute change tracking (can handle multiple profiles for single natural key)
+
+
+    - You'll need to maintain a cross-reference table in the ETL system to substitute the appropriate
+        surrogate key on each fact and dimension table row.
+
+
+
+- Dimension Natural and Durable Supernatural Keys
+
+    - A natural key (NK) is often an attribute in the dimension table.  They are often composed of meaningful
+        constituent parts.  These components should be split apart and made available as separate
+        attributes.
+
+
+    - In a dimension table with attribute change tracking, it's important to have an identifier that
+        uniquely and reliably identifies the dimension entity across it's attribute changes.  The NK seems
+        to fit the bill, but it may change over time.  
+
+      If it does change due to unexpected business rules, the ETL system needs to assign permanently durable 
+        identifiers known as 'supernatural keys'.  These are controlled by the DW and remain immutable for
+        the life of the system.
+
+
+
+- Degenerate Dimension Surrogate Keys
+
+    - If a retailer's POS system doesn't assign unique transaction numbers across locations or they reuse
+        them, we may need to assign a surrogate key to identify a specific transaction.
+
+
+    - In this case, we'd create a new dimension table to hold the transaction numbers, and they would no
+        longer be degenerate.
+
+
+
+- Date Dimension Smart Keys
+
+    - Since date dimensions don't change, we don't need surrogate keys, and we can use more intelligent keys
+        for the date dimension.  Typically, the 'yyyymmdd' format is used for the keys.
+
+
+    - Note that we should not try to use this to filter the fact table directly, since this would have a
+        negative performance impact.  Filtering should be done on the dimension table.
+
+
+    - However, the 'yyyymmdd' key is useful for partitioning fact tables under the hood.  We can use this key
+        to archive old data without disturbing the rest of the fact table.
+
+
+    - Note that you also need a special date key value for the situation in which the date key is unknown.
+
+
+
+- Fact Table Surrogate Keys
+
+    - Although surrogate keys for dimension tables are mandatory, they are less mandatory for fact tables.
+        Typically a fact table's PK is a combination of it's FKs and/or DD.
+
+
+    - However, if we do use a surrogate key for fact tables, we get these benefits:
+
+        - Immediate unique identification during ETL processing
+        - Backing out or resuming a bulk load (by using range of keys)
+        - Replacing updates with inserts plus deletes
+        - Use the fact table surrogate key in a parent/child schema (with different-grained fact tables)
+
+
+
+- Snowflake Schemas with Normalized Dimensions
+
+    - Denormalized tables make data modelers from the operational world uncomfortable.  If something
+        changes, in 3NF, it only needs to be updated in one place.
+
+
+    - Dimensional table normalization is known as 'snowflaking'.  Redundant attributes are removed and put
+        into separate normalized dimension tables.  Avoid this because:
+
+        - The model becomes much more complex and difficult to understand
+        - DB optimizers also struggle with the complexity
+        - Disk space savings is insignificant, compared to the size of fact tables
+        - Users have a more difficult time browsing into a dimension
+        - Bitmap indexes, used for low-cardinality columns, are not utilized
+
+
+
+- Outriggers
+
+    - Although snowflaking is discouraged, there are situations in which it is permissable to build an
+        'outrigger dimension' that attaches to a dimension within the fact table's immediate halo.
+
+
+    - For instance, we want to keep a separate Product Introduction Date Dimension that keeps track of dates
+        for the Product Dimension.  We want to descriptively and uniquely label these dates as different
+        from other dates associated with the business process.
+
+
+    - This only makes sense if the business wants to filter and group this date by nonstandard calendar
+        attributes, such as fiscal period, business day indicator, or holiday period.
+
+      Otherwise, we could just treat the date attribute as a standard date type column in the Product
+        Dimension.  Outriggers should be the exception rather than the rule.
+
+
+
+- Centipede Fact Tables with Too Many Dimensions
+
+    - The fact table is naturally highly normalized and compact.  Sometimes some modelers, uncomfortable
+        with denormalization but aware that snowflaking is discouraged, will start trying to normalize
+        through the fact table.
+
+      In this case, the fact table will have a ton of dimensions, like:
+
+        ProductDimension
+        BrandDimension
+        CategoryDimension
+        DepartmentDimension
+        PackageTypeDimension
+
+
+    - This will lead to significantly increased fact table space requirements.  Most business processes can
+        be modeled with less than 20 dimensions in the fact table.  If you have too many dimensions, you 
+        should try to combine them.
