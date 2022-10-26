@@ -106,10 +106,10 @@
     - Step 3 - Identify the Dimensions
 
         - The Product and the Transaction fall out immediately as dimensions.  The Date, the Store, the
-            Promotion under which the product is sold, and the Cashier and potentially the  Method of Payment 
+            Promotion under which the product is sold, and the Cashier and potentially the Method of Payment 
             are also clear.
 
-        - Note that a dimensions should never cause additional fact table rows to be generated.
+        - Note that a dimension should never cause additional fact table rows to be generated.
 
 
     - Step 4 - Identify the Facts

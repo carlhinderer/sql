@@ -1,0 +1,570 @@
+-----------------------------------------------------------------------
+|  CHAPTER 4 - INVENTORY                                              |
+-----------------------------------------------------------------------
+
+- Value Chain Introduction
+
+    - Most organizations have an underlying 'value chain' of key business processes.  The value chain
+        identifies the natural, logical flow of an organization's primary activities.
+
+
+    - For example:
+
+        - A retailer issues purchase orders to product manufacturers
+        - The products are delivered to the retailer's warehouse, where they are held in inventory
+        - A delivery is then made to an individual store, where the products sit in inventory until purchased
+
+
+    - Visually, here is a subset of a retailer's value chain:
+
+        + Issue Purchase Order to Manufacturer
+        + Receive Warehouse Deliveries
+        + Warehouse Product Inventory
+        + Receive Store Deliveries
+        + Store Product Inventory
+        + Retail Sales
+
+
+    - Operational source systems produce transactions or snapshots at each step of the value chain.  The
+        primary objective of most DW/BI systems is to monitor the performance results of these key 
+        processes.
+
+      Because each process produces unique metrics at unique time intervals, with unique granularity and
+        dimensionality, each process typically spawns one or more fact tables.
+
+
+
+- Inventory Models
+
+    - We'll discuss several complementary inventory models.
+
+
+    - The first is the 'periodic snapshot', where product inventory levels are measured at regular 
+        intervals and placed as separate rows in a fact table.  These periodic snapshot rows appear over
+        time as a series of data layers in the dimensional model.  This is the most common inventory
+        schema.
+
+
+    - The second model is where every transaction that impacts inventory levels as products move through
+        the warehouse is recorded.
+
+
+    - In the third model, we'll describe the 'inventory accumulating snapshot', where a fact table row is
+        inserted for each product delivery and then the row is updated as the product moves through the
+        warehouse.
+
+
+
+- Inventory Periodic Snapshot
+
+    - Getting inventory sizes right is very important in retailing.  The retailer wants to analyze daily
+        quantity-on-hand inventory levels by product and store.
+
+
+    - Using the 4-step dimensional design process, we need to decide the grain in periodic snapshotting of
+        our store inventory.  The most atomic level of detail is a daily interval for each product in each
+        store.  The dimensions immediately fall out - date, product, and store.
+
+
+          Date Dimension                 Store Inventory Snapshot Fact               Product Dimension
+          -----------------              -------------------------------             -------------------
+          Date Key (PK)                  Date Key (FK)                               Product Key (PK)
+          ...                            Product Key (FK)                            Storage Requirement Type
+                                         Store Key (FK)                              ...
+                                         Quantity on Hand
+          Store Dimension
+          -----------------
+          Store Key (PK)
+          ...
+
+
+    - In Chapter 3, the sales fact table was sparse, since every product isn't in every cart.  Inventory,
+        on the other hand, generates dense snapshot tables.
+
+      Since retailers want to avoid out-of-stock situations, there may be a row in the fact table for
+        every product for every store for every day.  In this case, you would include out-of-stock
+        measurements as explicit rows.
+
+
+    - Since this can make fact tables grow large, we may need to make some compromises.  For instance, we
+        could have the last 60 days of inventory by day.  Then, we could store historical data by weekly
+        snapshot.
+
+
+
+- Semi-Additive Facts
+
+    - Inventory levels are not additive across dates, because they represent snapshots of a level or balance
+        at one point in time.  However, they are additive across store dimensions.
+
+      Because they are additive across some dimensions but not all, they are 'semi-additive facts'.
+
+
+    - All measures that record a static level (inventory levels, financial account balances, measures of
+        intensity such as room temperatures) are inherently non-additive across date dimensions.  In these
+        cases, the measure may be aggregated by averaging across dates.
+
+      Note that you can't use the SQL AVG function, since it averages across all rows, not all dates.
+
+
+
+- Enhanced Inventory Facts
+
+    - The periodic inventory snapshot fact table gives you a simplistic view.  Most of the time, quantity
+        on hand isn't enough.  It needs to be used in conjunction with other facts to measure the velocity
+        of inventory movement and develop other interesting metrics like 'number of days supply'.
+
+
+    - If 'quantity sold' was added to each fact row, you could calculate the number of turns and days
+        supply.
+
+        days_supply = quantity_sold / quantity_on_hand
+
+
+    - For an extended time span, such as a year:
+
+        num_turns = total_quantity_sold / avg(daily_quantity_on_hand)
+
+        days_supply = final_quantity_on_hand / avg(daily_quantity_sold)
+
+
+    - Here is our updated fact table:
+
+                 Store Inventory Snapshot Fact
+                 ----------------------------------
+                 Date Key (FK)
+                 Product Key (FK)
+                 Store Key (FK)
+                 Quantity on Hand
+                 Quantity Sold
+                 Inventory Dollar Value at Cost
+                 Inventory Dollar Value at Latest Selling Price
+
+
+
+- Inventory Transactions
+
+    - A second way to model inventory business processes is to record every transaction that affects
+        inventory.  Inventory transactions at a warehouse might include:
+
+        - Receive product.
+        - Place product into inspection hold.
+        - Release product from inspection hold.
+        - Return product to vendor due to inspection failure.
+        - Place product in bin.
+        - Pick product from bin.
+        - Package product for shipment.
+        - Ship product to customer.
+        - Receive product from customer.
+        - Return product to inventory from customer return.
+        - Remove product from inventory.
+
+
+    - Each inventory transaction identifies the date, product, warehouse, vendor, transaction type, and
+        in most cases, amount representing inventory quantity impact.
+
+
+        Date Dimension           Warehouse Inventory Transaction Fact     Product Dimension
+                                 -------------------------------------
+                                 Date Key (FK)
+        Warehouse Dimension      Product Key (FK)                         Inventory Transaction Type Dimension
+        ---------------------    Warehouse Key (FK)                       ------------------------------------
+        Warehouse Key (PK)       Inventory Transaction Type Key (FK)      Inventory Transaction Type Key (PK)
+        Warehouse Number (NK)    Inventory Transaction Number (DD         Inventory Transaction Type Descript
+        Warehouse Name           Inventory Transaction Dollar Amount      Inventory Transaction Type Group
+        Warehouse Address
+        Warehouse City
+        Warehouse City-State
+        Warehouse State
+        Warehouse ZIP
+        Warehouse Zone
+        Warehouse Total Square Footage
+
+
+    - The transaction fact table is useful for measuring the frequency and timing of specific transaction
+        types to answer questions that couldn't be answered by the less granular periodic snapshot.
+
+      Even so, it is impractical to use the transaction fact table as the sole basis for measuring
+        performance.  It is theoretically possible to reconstruct the exact inventory position for a 
+        specific time by rolling up transactions, but is too cumbersome for broad analytic questions.  A
+        snapshot table often complements a transaction fact table.
+
+
+
+- Inventory Accumulating Snapshot
+
+    - The final inventory model is the 'accumulating snapshot'.  Accumulating snapshot fact tables are used 
+        for processes that have a definite beginning, definite end, and identifiable milestones in between.
+
+
+    - In this inventory model, one row is placed in the fact table when a particular product is received
+        at the warehouse.  The disposition of the product is tracked on this single fact row until it
+        leaves the warehouse.
+
+                                 Inventory Receipt Accumulating Fact
+                                 --------------------------------------
+                                 Product Lot Receipt Number (DD)
+    Date Received Dimen          Date Received Key (FK)                    Product Dimension
+                                 Date Inspected Key (FK)
+    Date Inspected Dimen         Date Bin Placement Key (FK)               Warehouse Dimension
+                                 Date Initial Shipment Key (FK)
+    Date Bin Placement Dimen     Date Last Shipment Key (FK)               Vendor Dimension
+                                 Product Key (FK)
+    Date Initial Shipment Dimen  Warehouse Key (FK)
+                                 Vendor Key (FK)
+    Date Last Shipment Dimen     Quantity Received
+                                 Quantity Inspected
+                                 Quantity Returned to Vendor
+                                 Quantity Placed in Bin
+                                 Quantity Shipped to Customer
+                                 Quantity Returned by Customer
+                                 Quantity Returned to Inventory
+                                 Quantity Damaged
+                                 Receipt to Inspected Lag
+                                 Receipt to Bin Placement Lag
+                                 Receipt to Initial Shipment Lag
+                                 Initial to Last Shipment Lag
+
+
+    - The accumulating snapshot fact table provides an updated status of the lot as it moves through 
+        standard milestones represented by multiple date-valued foreign keys.
+
+        # Fact row inserted when lot received
+        -------------------------------------------------
+        Lot Receipt   Date Received   Date Inspected   Date Bin        Product   Quantity    Receipt to
+        Number        Key             Key              Placement Key   Key       Received    Inspected Lag
+        --------------------------------------------------------------------------------------------------
+        101           20130101        0                0               1         100
+
+
+
+- Fact Table Types
+
+    - In summary, there are just 3 fundamental fact table types, which holds true across all industries.
+
+        1. Transaction
+        2. Periodic Snapshot
+        3. Accumulating Snapshot
+
+
+    - Comparison chart for the 3 types of fact tables located at 'diagrams/ch04'.
+
+
+
+- Transaction Fact Tables
+
+    - The most fundamental view of the business's operations is at the individual transaction level.
+        These tables represent an even that occurred at an instantaneous point in time.  A row exists only
+        if an event occurred.
+
+
+    - Atomic transaction data is the most naturally dimensional data.  However, there are some business
+        questions that are impractical to answer using only these details.
+
+
+
+- Periodic Snapshot Fact Tables
+
+    - Periodic snapshots are needed to see the cumulative performance of the business at regular,
+        predictable time intervals.  Unlike the transaction table where a row is added for each event,
+        the periodic snapshot takes a picture at the end of each period (ie day, week, month).
+
+
+    - The periodic snapshots are stacked consecutively into the fact table.  This is often the only place
+        to easily retrieve a regular, predictable view of performance trends.  
+
+
+    - We could crawl through individual transactions to get summary information, but this is slow and
+        complicated.  The periodic snapshot provides management with a flexible, quick view of inventory 
+        levels.
+
+
+
+- Accumulating Snapshot Fact Tables
+
+    - Although not as common as the other 2, accumulating snapshots can be very insightful.  They 
+        represent processes that have a definite beginning and end together with a standard set of
+        intermediate processing steps.  They are most appropriate when business users want to perform
+        workflow or pipeline analysis.
+
+
+    - Accumulating snapshots always have multiple date foreign keys, representing the predictable process
+        milestones.
+
+
+    - Because accumulating snapshots often represent the efficiency and elapsed time of a workflow or 
+        pipeline, the fact table typically contains metrics representing the durations or lags between key 
+        milestones.
+
+      They may also include milestone completion counters (0 or 1) or a foreign key to a status dimension
+        the reflects the pipeline's latest status.
+
+
+    - Due to the frequent updates, accumulating snapshot tables are typically problematic for OLAP cubes.
+        Each time there is a change, much of the cube needs to be reprocessed.
+
+
+
+- Complementary Fact Table Types
+
+    - Sometimes, accumulating and periodic snapshots work in conjunction with one another, such as when
+        you incrementally build the monthly snapshot by adding the affect of each day's transactions into
+        a rolling accumulating snapshot.  Then, you can also store 36 months of historical data in a
+        periodic snapshot.
+
+
+    - Transactions and snapshots are the yin and yang of dimensional designs.  Used together, they provide
+        a complete view of the business.  Both are needed, because there is no simple way to combine them
+        into a single fact table.
+
+
+
+- Value Chain Integration
+
+    - Both business and IT organizations are typically interested in value chain integration.
+
+        - Businesses need to look across the business's processes to better evaluate performance.
+
+        - IT managers recognize integration is needed to build DWs and business intelligence.
+
+
+    - Using shared, common dimensions is absolutely critical to designing dimensional models that can be
+        integrated.
+
+
+        Store Dimension        Retails Sales Transaction Facts          Promotion Dimension
+
+        Date Dimension         Retail Inventory Snapshot Facts          Product Dimension
+
+                               Warehouse Inventory Transaction Facts    Warehouse Dimension
+
+
+
+- Enterprise DW Bus Architecture
+
+    - For long-term DW/BI success, you need to use an architected, incremental approach to build the 
+        enterprise's DW.  The approach we advocate is the 'Enterprise DW Bus Architecture'.
+
+
+    - A 'bus' is a common structure that everything connects to and from which everything derives power.
+        In the value chain, you can envision many different business processes plugging into the 
+        enterprise DW bus.
+
+      Ultimately, all the processes of an organization share a comprehensive set of common, conformed
+        dimensions.
+
+
+    - The master suite of standardized dimensions and facts has a uniform interpretation across the
+        enterprise.  This establishes the data architecture framework.  You can then tackle the 
+        implementation of process-specific dimensional models, with each one closely adhering to the
+        architecture.
+
+
+
+- Enterprise DW Bus Matrix
+
+    - We recommend using an 'Enterprise DW Bus Matrix' to document and communicate the bus architecture.
+        Working in a tabular fashion, the organization's business processes are represented as matrix rows.
+
+        (Example for a retailer is located at 'diagrams/ch04')
+
+
+    - The matrix rows are business processes, and the columns are dimensional models used across the
+        enterprise.
+
+
+    - When it comes time to tackle a large DW/BI project, start with a single row and focus on the results
+        for it.  This reduces risk.
+
+
+    - You can draft a different matrix, still with the business processes as the rows, but with stakeholders
+        (departments) as the columns.  This identifies which groups need to be invited to the detailed
+        requirements and dimensional modeling meetings.
+
+
+
+- Common Bus Matrix Mistakes
+
+    - Departmental or overly encompassing rows
+
+        - Rows should correspond to individual business processes
+
+
+    - Report-centric or too narrowly defined rows
+
+        - A bus matrix shouldn't resemble a laundry list of requested reports
+        - A single process supports numerous analyses
+
+
+    - Overly generalized columns
+
+        - A 'person' column may refer to a variety of people, this is too broad
+        - Internal and external addreses do not need to be combined into a single generic column
+
+
+    - Separate columns for each level in a hierarchy
+
+        - The bus columns should refer to dimensions at their most granular level
+        - Use a single column for dates, not multiple columns for each level of granularity
+
+
+
+- Conformed Dimensions
+
+    - Conformed dimensions (aka common, master, reference, or shared dimensions) should be built once in
+        the ETL system, and then replicated either logically or physically throughout the enterprise DW/BI
+        environment.
+
+
+    - When built, it's extremely important that DW/BI development teams use these dimensions.  It should
+        be mandated by the organization's CIO.
+
+
+
+- Conformed Dimensions - Drilling Across Fact Tables
+
+    - In addition to consistency and reusability, conformed dimensions enable you to combine performance
+        measurements from different business processes into a single report.
+
+
+    - You can use multipass SQL to query each dimensional model separately, then outer-join the query
+        results based on a common dimensions (ie the product name).  This ensures all rows are included in
+        the combined report, even if they only appear in one set of query results.
+
+      This linkage, often referred to as 'drill across', is straightforward if the dimension table
+        attributes are identical.
+
+
+    - Bringing metrics from across fact tables (drilling across) is supported by many BI products and
+        platforms.
+
+
+
+- Conformed Dimensions - Identical Conformed Dimensions
+
+    - At the most basic level, conformed dimensions mean the same thing with every possible fact table to
+        which they are joined.  The date dimension connected to the sales facts is identical to the date
+        dimension connected to the inventory facts.
+
+
+    - Identical conformed dimensions have consistent dimension keys, attribute column names, attribute
+        definitions, and values.
+
+      Dimensions don't conform if they're called 'Month' in one dimension and 'MonthName' in another.
+        They don't conform if the value is 'July' in one dimension and 'JULY' in another.
+
+
+    - Sometimes, dimensions conform, but one version has additional attributes.  For instance, there are
+        Product Dimension attributes needed for inventory that are not needed for sales.  This is fine,
+        but you cannot use these extra attributes to drill across processes.
+
+
+
+- Conformed Dimensions - Shrunken Rollup Conformed Dimension with Attribute Subset
+
+    - Dimensions also conform when they contain a subset of attributes from a more granular dimension.
+        'Shrunken rollup dimensions' are required when a fact table captures performance metrics at a
+        higher level of granularity than the atomic base dimension.
+
+      For instance, this would be the case if you had a weekly inventory snapshot in addition to the daily
+        snapshot.
+
+
+    - For another example, if retail sales captures data at the atomic product level, but forecasting
+        generates data at the brand level, they cannot share a product dimension, since the granularity
+        is different.
+
+      The Product and Brand dimensions still conform if the Brand table attributes are a strict subset
+        of the atomic Product table's attributes.  Attributes that are common to both the detailed and
+        rolled-up dimension tables, such as Brand and Category, should be labeled, defined, and identically
+        valued in both tables.
+
+
+
+- Conformed Dimensions - Shrunken Conformed Dimensions with Row Subset
+
+    - Another case of conformed dimension subsetting occurs when 2 dimensions are at the same level of
+        detail, but one represents only a subset of rows.
+
+
+    - For example, the corporate product dimension contains rows for the full portfolio of products across
+        multiple LOBs.  Analysts may want to view only their subset of the corporate dimension, restricted
+        to the product row for their business.
+
+      By using a subset of rows, they aren't encumbered with the corporation's full product set.
+
+
+    - Instead of creating a new column for a shrunken conformed dimension, either notate it within the
+        cell or subdivide the column with the different granularities.
+
+
+
+- Limited Conformity
+
+    - There are some situations when it may not be realistic or necessary to establish conformed dimensions
+        for the organization.  
+
+        - If a conglomerate spans widely varied industries, it may not be worth trying to integrate.
+
+        - If each LOB has unique customers and products, it may not provide business value to integrate.
+
+        - If an organization is unwilling to agree on common definitions, the organization shouldn't
+            attempt to build a DW/BI environment.
+
+
+    - Sometimes, it's worth just taking a small step towards conformity.  Maybe a handful of attributes
+        can be agreed upon, and it will be a step in the right direction.
+
+
+
+- Importance of Data Governance and Stewardship
+
+    - Reaching consensus on attribute names and contents is difficult.  Management has to drive change,
+        or data will remain in department silos forever.  IT lacks the organizational authority to do
+        this by itself.
+
+
+    - It takes special subject matter experts with a lot of respect and strong communication skills to 
+        lead the governance effort.  They must spearhead a cultural change.
+
+
+    - Establishing common master data is often a politically charged issue.  The challenges are cultural
+        rather than technical.
+
+
+    - Historically, DW/BI teams created the recipes for conformed dimensions and managed the cleansing
+        and mapping in the ETL pipeline.  ERP systems promised to help operational systems conform, but
+        organizations relied on disparate systems for niche requirements.
+
+      Recently, MDM (Master Data Management) solutions have addressed the need for centralized master
+        data at the source where transactions are captured.
+
+
+
+- Conformed Dimensions and the Agile Movement
+
+    - Some claim that the need for agile development practices makes investing the time to conform
+        dimensions unfeasible.  In these cases, we should point out that having conformed dimensions lets
+        you build and deploy features faster.
+
+
+    - You could focus on starting with a small number of attributes, then use architectural agile sprints
+        to slowly tackle additional dimensions.
+
+
+
+- Conformed Facts
+
+    - When building dimensional models, 95% of effort goes into conforming dimensions, while the remaining
+        5% goes into conforming facts.  Revenue, profit, standard prices and costs, measures of quality
+        and customer satisfaction, and other KPIs must also conform.
+
+
+    - If facts live in more than one dimensional model, the underlying definitions and equations for these
+        facts must be the same.  If several different processes report revenue, these separate metrics
+        should have the same financial definition.
+
+
+    - If measurements have 2 different meanings, they should have 2 different names.  For example, 
+        inventory received in warehouses might be measured in shipping cases, while inventory received at
+        a store may be measured in units.

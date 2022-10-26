@@ -87,7 +87,7 @@
         - Choose the best data sources
         - Make UIs simple and match to users' thinking processes
         - Make sure the data is accurate and can be trusted
-        - Continuously monitory the accuracy of data
+        - Continuously monitor the accuracy of data
         - Adapt to changing users and business 
 
 
@@ -134,7 +134,7 @@
 
 - OLAP Cube Deployment Considerations
 
-    - A star schema hosted in a REBMS is a good physical foundation for building an OLAP cube.
+    - A star schema hosted in a RDBMS is a good physical foundation for building an OLAP cube.
         The star schema is generally considered more stable for backup and recovery.
 
 
@@ -170,7 +170,7 @@
 
 
     - A 'fact' represents a business measurement.  We can imagine standing in a store, watching
-        products being sold and writing down the unit quantity and dollar sales amout for each
+        products being sold and writing down the unit quantity and dollar sales amount for each
         product in each sales transaction.
 
 
